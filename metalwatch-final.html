@@ -662,9 +662,6 @@ async function fetchFX() {
 }
 
 // ── fetchGoldPrices ────────────────────────────────────────────────────────
-// Routes through the gold-proxy Supabase edge function (same project as FX).
-// Server-side fetch bypasses goodreturns CORS restrictions completely.
-// Falls back gracefully if the edge function is unavailable.
 async function fetchGoldPrices() {
   const results = {
     in24k: null, in22k: null, inSilver: null,
@@ -672,32 +669,40 @@ async function fetchGoldPrices() {
   };
 
   const headers = { Authorization: `Bearer ${SB_KEY}` };
+  console.debug('[GoldPulse] Using SB_URL:', SB_URL);
+  console.debug('[GoldPulse] Key prefix:', SB_KEY.slice(0, 20) + '...');
 
-  // Fetch both markets in parallel
+  async function callProxy(market) {
+    const url = `${SB_URL}/functions/v1/gold-proxy?market=${market}`;
+    const res = await fetchWithTimeout(url, { headers });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status} — ${body}`);
+    }
+    return res.json();
+  }
+
   await Promise.allSettled([
-
-    // India
-    fetchWithTimeout(`${SB_URL}/functions/v1/gold-proxy?market=india`, { headers })
-      .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+    callProxy('india')
       .then(d => {
+        console.debug('[GoldPulse] India response:', d);
         if (d.gold24k) results.in24k    = d.gold24k;
         if (d.gold22k) results.in22k    = d.gold22k;
         if (d.silver)  results.inSilver = d.silver;
       })
-      .catch(e => console.warn('[GoldPulse] India gold fetch failed:', e)),
+      .catch(e => console.error('[GoldPulse] India failed:', e.message)),
 
-    // Malaysia
-    fetchWithTimeout(`${SB_URL}/functions/v1/gold-proxy?market=malaysia`, { headers })
-      .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+    callProxy('malaysia')
       .then(d => {
+        console.debug('[GoldPulse] Malaysia response:', d);
         if (d.gold24k) results.my24k    = d.gold24k;
         if (d.gold22k) results.my22k    = d.gold22k;
         if (d.silver)  results.mySilver = d.silver;
       })
-      .catch(e => console.warn('[GoldPulse] Malaysia gold fetch failed:', e)),
-
+      .catch(e => console.error('[GoldPulse] Malaysia failed:', e.message)),
   ]);
 
+  console.debug('[GoldPulse] Final gold results:', results);
   return results;
 }
 
