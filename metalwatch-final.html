@@ -4,6 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GoldPulse</title>
+
+<!-- ── SECURITY HEADERS ─────────────────────────────────────────────────
+  Content-Security-Policy:
+    - default-src 'none'            → block everything not explicitly listed
+    - script-src 'self' 'unsafe-inline' → inline script needed (single-file app)
+    - style-src 'self' 'unsafe-inline' fonts.googleapis.com → inline styles + Google Fonts CSS
+    - font-src fonts.gstatic.com    → Google Fonts files
+    - connect-src                   → only our Supabase project + Yahoo Finance
+    - img-src 'self' data:          → no external images
+    - frame-ancestors 'none'        → cannot be embedded in an iframe (clickjacking)
+    - base-uri 'self'               → prevent base tag injection
+    - form-action 'none'            → no form submissions
+─────────────────────────────────────────────────────────────────────── -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'none';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src https://fonts.gstatic.com;
+  connect-src https://ooultiizgymelwguxuxi.supabase.co
+              https://query1.finance.yahoo.com
+              https://query2.finance.yahoo.com;
+  img-src 'self' data:;
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'none';
+">
+
+<!-- Prevent MIME-type sniffing -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+<!-- Do not send referrer to external domains -->
+<meta name="referrer" content="no-referrer">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -520,6 +552,12 @@ const GOLD_CACHE_TTL = 14 * 60 * 60 * 1000;  // 14 hours — covers two IBJA ses
 const FX_CACHE_TTL   = 12 * 60 * 60 * 1000;  // 12 hours
 const FETCH_TIMEOUT  = 10_000;  // 10 second timeout on all fetches
 
+// ── SUPABASE CONFIG ────────────────────────────────────────────────────────
+// Hardcoded for reliability — works for all users without any setup.
+// localStorage values from Folio take precedence if present (keeps both in sync).
+const SB_URL = localStorage.getItem('sb_url') || 'https://ooultiizgymelwguxuxi.supabase.co';
+const SB_KEY = localStorage.getItem('sb_key') || 'sb_publishable_yBDEcZA8yCyOXh8tgrzcvg_DeZ8kbOQ';
+
 // ── DOM HELPERS ────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
@@ -580,26 +618,20 @@ function fetchWithTimeout(url, options = {}) {
 }
 
 // ── yPrice — mirrors Folio tracker exactly ─────────────────────────────────
-// Reads SB config fresh each call in case Folio set it after this page loaded.
 async function yPrice(ticker) {
-  const sbUrl = localStorage.getItem('sb_url');
-  const sbKey = localStorage.getItem('sb_key');
+  // 1. Try Supabase edge function first (CORS-safe, works pre/post market)
+  try {
+    const res = await fetchWithTimeout(
+      `${SB_URL}/functions/v1/yahoo-proxy?ticker=${encodeURIComponent(ticker)}`,
+      { headers: { Authorization: `Bearer ${SB_KEY}` } }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.price > 0) return data.price;
+    }
+  } catch (_) { /* fall through to direct Yahoo call */ }
 
-  // 1. Try Supabase edge function (CORS-safe, works pre/post market)
-  if (sbUrl && sbKey) {
-    try {
-      const res = await fetchWithTimeout(
-        `${sbUrl}/functions/v1/yahoo-proxy?ticker=${encodeURIComponent(ticker)}`,
-        { headers: { Authorization: `Bearer ${sbKey}` } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.price > 0) return data.price;
-      }
-    } catch (_) { /* fall through to direct call */ }
-  }
-
-  // 2. Direct Yahoo Finance call (works during market hours without CORS issues)
+  // 2. Direct Yahoo Finance call (fallback — works during market hours)
   try {
     const res  = await fetchWithTimeout(
       `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`
@@ -630,44 +662,40 @@ async function fetchFX() {
 }
 
 // ── fetchGoldPrices ────────────────────────────────────────────────────────
+// Routes through the gold-proxy Supabase edge function (same project as FX).
+// Server-side fetch bypasses goodreturns CORS restrictions completely.
+// Falls back gracefully if the edge function is unavailable.
 async function fetchGoldPrices() {
   const results = {
     in24k: null, in22k: null, inSilver: null,
     my24k: null, my22k: null, mySilver: null,
   };
 
-  // Scrape via allorigins CORS proxy — no edge function calls for gold prices
-  async function scrape(url) {
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res   = await fetchWithTimeout(proxy);
-    const json  = await res.json();
-    return json.contents || '';
-  }
+  const headers = { Authorization: `Bearer ${SB_KEY}` };
 
+  // Fetch both markets in parallel
   await Promise.allSettled([
-    // India — goodreturns Chennai
-    scrape('https://www.goodreturns.in/gold-rates/chennai.html').then(html => {
-      const m24 = html.match(/₹([\d,]+)\s*per gram for 24 karat/);
-      const m22 = html.match(/₹([\d,]+)\s*per gram for 22 karat/);
-      const mAg = html.match(/silver[^₹]*?₹([\d,]+)\s*per gram/i)
-               || html.match(/₹([\d,]+)\s*per gram[^f]*?silver/i);
-      if (m24) results.in24k    = parseFloat(m24[1].replace(/,/g, ''));
-      if (m22) results.in22k    = parseFloat(m22[1].replace(/,/g, ''));
-      if (mAg) results.inSilver = parseFloat(mAg[1].replace(/,/g, ''));
-    }),
 
-    // Malaysia — goodreturns Malaysia
-    scrape('https://www.goodreturns.in/gold-rates/malaysia.html').then(html => {
-      const m24 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 24 karat/i)
-               || html.match(/24 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
-      const m22 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 22 karat/i)
-               || html.match(/22 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
-      const mAg = html.match(/silver[^R]*?RM\s*([\d,]+(?:\.\d+)?)\s*per gram/i)
-               || html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram[^f]*?silver/i);
-      if (m24) results.my24k    = parseFloat(m24[1].replace(/,/g, ''));
-      if (m22) results.my22k    = parseFloat(m22[1].replace(/,/g, ''));
-      if (mAg) results.mySilver = parseFloat(mAg[1].replace(/,/g, ''));
-    }),
+    // India
+    fetchWithTimeout(`${SB_URL}/functions/v1/gold-proxy?market=india`, { headers })
+      .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+      .then(d => {
+        if (d.gold24k) results.in24k    = d.gold24k;
+        if (d.gold22k) results.in22k    = d.gold22k;
+        if (d.silver)  results.inSilver = d.silver;
+      })
+      .catch(e => console.warn('[GoldPulse] India gold fetch failed:', e)),
+
+    // Malaysia
+    fetchWithTimeout(`${SB_URL}/functions/v1/gold-proxy?market=malaysia`, { headers })
+      .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+      .then(d => {
+        if (d.gold24k) results.my24k    = d.gold24k;
+        if (d.gold22k) results.my22k    = d.gold22k;
+        if (d.silver)  results.mySilver = d.silver;
+      })
+      .catch(e => console.warn('[GoldPulse] Malaysia gold fetch failed:', e)),
+
   ]);
 
   return results;
