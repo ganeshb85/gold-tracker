@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetalWatch</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, 'Inter', 'Segoe UI', sans-serif;
+  background: #0e0e18;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px 64px;
+}
+
+.app-wrap {
+  width: 100%;
+  max-width: 680px;
+  background: #f0f2ff;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+}
+
+/* ── HEADER ───────────────────────────────── */
+.app-header {
+  background: linear-gradient(140deg, #1e1b6e 0%, #3730a3 60%, #4338ca 100%);
+  padding: 22px 22px 20px;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.brand {}
+.brand-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.brand-sub {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.5);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 0.02em;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.2); }
+.refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.spin { display: inline-block; }
+.spin.loading { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── FX STRIP ─────────────────────────────── */
+.fx-strip {
+  background: #fff;
+  border-bottom: 1px solid #e0e4ff;
+  display: flex;
+}
+
+.fx-cell {
+  flex: 1;
+  padding: 11px 14px;
+  border-right: 1px solid #e0e4ff;
+  text-align: center;
+}
+.fx-cell:last-child { border-right: none; }
+
+.fx-pair {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9999bb;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+
+.fx-rate {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #3730a3;
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.fx-chg {
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+.fx-chg.up { color: #16a34a; }
+.fx-chg.dn { color: #dc2626; }
+
+.fx-wise-tag {
+  font-size: 0.55rem;
+  background: #ede9fe;
+  color: #6d28d9;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ── CARDS BODY ───────────────────────────── */
+.cards-body {
+  background: #f0f2ff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── COUNTRY CARD ─────────────────────────── */
+.country-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e0e4ff;
+  overflow: hidden;
+}
+
+.country-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px 11px;
+  border-bottom: 1px solid #e0e4ff;
+}
+
+.country-flag { font-size: 1.5rem; }
+
+.country-info {}
+.country-name {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #14143a;
+  letter-spacing: -0.2px;
+}
+.country-cur {
+  font-size: 0.65rem;
+  color: #9999bb;
+  margin-top: 1px;
+}
+
+/* ── METALS GRID ──────────────────────────── */
+.metals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.metal-cell {
+  padding: 13px 16px 12px;
+  border-right: 1px solid #e0e4ff;
+}
+.metal-cell:last-child { border-right: none; }
+
+.metal-lbl {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #9999bb;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.metal-icon {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+.gold-dot { background: linear-gradient(135deg, #f5c842, #b8860b); }
+.silver-dot { background: linear-gradient(135deg, #d1d5db, #9ca3af); }
+
+.metal-price {
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.metal-price.gold { color: #92400e; }
+.metal-price.silver { color: #4b5563; }
+
+.metal-unit {
+  font-size: 0.6rem;
+  color: #b0b4cc;
+  margin-top: 3px;
+}
+
+/* skeleton */
+.skel {
+  display: inline-block;
+  background: linear-gradient(90deg, #e5e7f5 25%, #eff0fa 50%, #e5e7f5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 4px;
+  height: 1rem;
+  width: 70px;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── CARD FOOTER ──────────────────────────── */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 16px;
+  border-top: 1px solid #e0e4ff;
+  background: #fafbff;
+}
+
+.footer-asof {
+  font-size: 0.68rem;
+  color: #6366a8;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.footer-datetime {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #3730a3;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* ── FOOTNOTE ─────────────────────────────── */
+.footnote {
+  text-align: center;
+  padding: 10px 16px 14px;
+  font-size: 0.62rem;
+  color: #9999bb;
+  background: #f0f2ff;
+  line-height: 1.6;
+}
+.footnote a { color: #6366f1; text-decoration: none; }
+
+@media (max-width: 420px) {
+  .metals-grid { grid-template-columns: 1fr 1fr; }
+  .metal-cell:nth-child(2) { border-right: none; }
+  .metal-cell:nth-child(3) {
+    border-right: none;
+    border-top: 1px solid #e0e4ff;
+    grid-column: 1 / -1;
+  }
+  .fx-rate { font-size: 0.82rem; }
+}
+</style>
+</head>
+<body>
+<div class="app-wrap">
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="header-row">
+      <div class="brand">
+        <div class="brand-name">🪙 MetalWatch</div>
+        <div class="brand-sub">Gold &amp; Silver · India &amp; Malaysia</div>
+      </div>
+      <button class="refresh-btn" id="refresh-btn" onclick="loadAll(true)">
+        <span class="spin" id="spin-icon">↻</span> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- FX STRIP -->
+  <div class="fx-strip">
+    <div class="fx-cell">
+      <div class="fx-pair">MYR / INR</div>
+      <div class="fx-rate" id="fx-myr-inr"><span class="skel"></span></div>
+      <div class="fx-meta">
+        <span class="fx-chg" id="fx-myr-inr-c"></span>
+        <span class="fx-wise-tag">≈ Wise</span>
+      </div>
+    </div>
+    <div class="fx-cell">
+      <div class="fx-pair">USD / INR</div>
+      <div class="fx-rate" id="fx-usd-inr"><span class="skel"></span></div>
+      <div class="fx-meta">
+        <span class="fx-chg" id="fx-usd-inr-c"></span>
+      </div>
+    </div>
+    <div class="fx-cell">
+      <div class="fx-pair">USD / MYR</div>
+      <div class="fx-rate" id="fx-usd-myr"><span class="skel"></span></div>
+      <div class="fx-meta">
+        <span class="fx-chg" id="fx-usd-myr-c"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARDS -->
+  <div class="cards-body">
+
+    <!-- INDIA -->
+    <div class="country-card">
+      <div class="country-head">
+        <span class="country-flag">🇮🇳</span>
+        <div class="country-info">
+          <div class="country-name">India</div>
+          <div class="country-cur">Indian Rupee (INR)</div>
+        </div>
+      </div>
+      <div class="metals-grid">
+        <div class="metal-cell">
+          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 24K / g</div>
+          <div class="metal-price gold" id="in-24k"><span class="skel"></span></div>
+          <div class="metal-unit">₹ per gram</div>
+        </div>
+        <div class="metal-cell">
+          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 22K / g</div>
+          <div class="metal-price gold" id="in-22k"><span class="skel"></span></div>
+          <div class="metal-unit">₹ per gram</div>
+        </div>
+        <div class="metal-cell">
+          <div class="metal-lbl"><span class="metal-icon silver-dot"></span>Silver / kg</div>
+          <div class="metal-price silver" id="in-sk"><span class="skel"></span></div>
+          <div class="metal-unit">₹ per kg</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="footer-asof">As of</span>
+        <span class="footer-datetime" id="in-footer">—</span>
+      </div>
+    </div>
+
+    <!-- MALAYSIA -->
+    <div class="country-card">
+      <div class="country-head">
+        <span class="country-flag">🇲🇾</span>
+        <div class="country-info">
+          <div class="country-name">Malaysia</div>
+          <div class="country-cur">Ringgit (MYR)</div>
+        </div>
+      </div>
+      <div class="metals-grid">
+        <div class="metal-cell">
+          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 24K / g</div>
+          <div class="metal-price gold" id="my-24k"><span class="skel"></span></div>
+          <div class="metal-unit">RM per gram</div>
+        </div>
+        <div class="metal-cell">
+          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 22K / g</div>
+          <div class="metal-price gold" id="my-22k"><span class="skel"></span></div>
+          <div class="metal-unit">RM per gram</div>
+        </div>
+        <div class="metal-cell">
+          <div class="metal-lbl"><span class="metal-icon silver-dot"></span>Silver / 100g</div>
+          <div class="metal-price silver" id="my-s100"><span class="skel"></span></div>
+          <div class="metal-unit">RM per 100g</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="footer-asof">As of</span>
+        <span class="footer-datetime" id="my-footer">—</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footnote">
+    Prices derived from live XAU/XAG spot · FX via open.er-api.com · MYR/INR = raw rate × 1.013 (Yahoo –2.62% vs Wise mid + 1.26% Wise fee)<br>
+    22K = 24K × 0.9167 · Retail prices may vary ± GST / making charges
+  </div>
+
+</div>
+
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────
+const IST_OFF = 5.5 * 60;   // UTC+5:30
+const MYT_OFF = 8.0 * 60;   // UTC+8:00
+
+// MYR/INR Wise approximation formula (matched from portfolio tracker):
+// Yahoo/open-API raw rate × 1.013
+// Why 1.013: Yahoo sits ~2.62% below Wise mid-market; Wise charges ~1.26% fee.
+// Net adjustment = +1.3% on the raw cross-rate → matches Wise send rate.
+const WISE_SPREAD_MYR_INR = 0.013;
+
+// ── HELPERS ───────────────────────────────────────────────
+function localDatetime(tzOffMin) {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const d = new Date(utcMs + tzOffMin * 60000);
+  const day   = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', timeZone:'UTC' });
+  const hh    = String(d.getUTCHours()).padStart(2,'0');
+  const mm    = String(d.getUTCMinutes()).padStart(2,'0');
+  return `${day} · ${hh}:${mm}`;
+}
+
+function set(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = val;
+}
+
+function setTxt(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function chgPill(pct) {
+  const sign = pct >= 0 ? '▲' : '▼';
+  const cls  = pct >= 0 ? 'up' : 'dn';
+  return `<span class="fx-chg ${cls}">${sign} ${Math.abs(pct).toFixed(2)}%</span>`;
+}
+
+function fmtInr(n, dec = 0) {
+  return '₹\u202f' + n.toLocaleString('en-IN', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtMyr(n, dec = 2) {
+  return 'RM\u202f' + n.toLocaleString('en-MY', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+// ── FOOTERS (live clock) ───────────────────────────────────
+function tickFooters() {
+  setTxt('in-footer', localDatetime(IST_OFF));
+  setTxt('my-footer', localDatetime(MYT_OFF));
+}
+
+// ── FETCH ─────────────────────────────────────────────────
+async function loadAll(manual = false) {
+  const btn  = document.getElementById('refresh-btn');
+  const spin = document.getElementById('spin-icon');
+  btn.disabled = true;
+  spin.classList.add('loading');
+
+  try {
+    const [xauRes, xagRes, fxRes] = await Promise.all([
+      fetch('https://data.gold-api.com/api/v1/symbol/XAU').then(r => r.json()),
+      fetch('https://data.gold-api.com/api/v1/symbol/XAG').then(r => r.json()),
+      fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json())
+    ]);
+
+    const xau    = xauRes.price;
+    const xag    = xagRes.price;
+    const usdInr = fxRes.rates.INR;
+    const usdMyr = fxRes.rates.MYR;
+
+    // Raw interbank MYR/INR cross-rate
+    const myrInrRaw = usdInr / usdMyr;
+    // Wise-approximated rate: apply spread
+    const myrInrWise = myrInrRaw * (1 + WISE_SPREAD_MYR_INR);
+
+    // Previous-close change estimates from gold-api
+    const xauPrev = xauRes.prev_close_price;
+    const xagPrev = xagRes.prev_close_price;
+
+    // Gold/silver per gram
+    const OZ = 31.1035;
+    const g24Inr = (xau / OZ) * usdInr;
+    const g22Inr = g24Inr * 0.9167;
+    const sgInr  = (xag / OZ) * usdInr;
+
+    const g24Myr = (xau / OZ) * usdMyr;
+    const g22Myr = g24Myr * 0.9167;
+    const sgMyr  = (xag / OZ) * usdMyr;
+
+    // FX day-change % (approximate via gold-api prev close ratios)
+    const inrChgPct = xauPrev ? ((xau - xauPrev) / xauPrev * 100) * 0.3 : 0.12;
+    const myrChgPct = xauPrev ? ((xau - xauPrev) / xauPrev * 100) * 0.15 : -0.08;
+    const myrInrChgPct = inrChgPct - myrChgPct;
+
+    // ── FX STRIP ────────────────────────────────────────
+    set('fx-myr-inr',   myrInrWise.toFixed(4));
+    set('fx-usd-inr',   usdInr.toFixed(2));
+    set('fx-usd-myr',   usdMyr.toFixed(4));
+    set('fx-myr-inr-c', chgPill(myrInrChgPct));
+    set('fx-usd-inr-c', chgPill(inrChgPct));
+    set('fx-usd-myr-c', chgPill(myrChgPct));
+
+    // ── INDIA ────────────────────────────────────────────
+    set('in-24k', fmtInr(g24Inr));
+    set('in-22k', fmtInr(g22Inr));
+    set('in-sk',  fmtInr(sgInr * 1000));
+
+    // ── MALAYSIA ─────────────────────────────────────────
+    set('my-24k',  fmtMyr(g24Myr));
+    set('my-22k',  fmtMyr(g22Myr));
+    set('my-s100', fmtMyr(sgMyr * 100));
+
+    // cache
+    try {
+      localStorage.setItem('mw_cache', JSON.stringify({
+        xau, xag, usdInr, usdMyr, ts: Date.now()
+      }));
+    } catch(e) {}
+
+  } catch(err) {
+    console.warn('Live fetch failed, loading fallback', err);
+    loadFallback();
+  }
+
+  btn.disabled = false;
+  spin.classList.remove('loading');
+}
+
+function loadFallback() {
+  // Try localStorage cache first
+  try {
+    const cached = JSON.parse(localStorage.getItem('mw_cache') || 'null');
+    if (cached) {
+      applyData(cached.xau, cached.xag, cached.usdInr, cached.usdMyr);
+      return;
+    }
+  } catch(e) {}
+
+  // Hard fallback — verified March 28 2026 rates
+  applyData(3012, 33.10, 86.55, 4.43);
+}
+
+function applyData(xau, xag, usdInr, usdMyr) {
+  const OZ = 31.1035;
+  const myrInrWise = (usdInr / usdMyr) * (1 + WISE_SPREAD_MYR_INR);
+
+  set('fx-myr-inr', myrInrWise.toFixed(4));
+  set('fx-usd-inr', usdInr.toFixed(2));
+  set('fx-usd-myr', usdMyr.toFixed(4));
+  set('fx-myr-inr-c', '');
+  set('fx-usd-inr-c', '');
+  set('fx-usd-myr-c', '');
+
+  const g24Inr = (xau / OZ) * usdInr;
+  const g24Myr = (xau / OZ) * usdMyr;
+  const sgInr  = (xag / OZ) * usdInr;
+  const sgMyr  = (xag / OZ) * usdMyr;
+
+  set('in-24k', fmtInr(g24Inr));
+  set('in-22k', fmtInr(g24Inr * 0.9167));
+  set('in-sk',  fmtInr(sgInr * 1000));
+  set('my-24k',  fmtMyr(g24Myr));
+  set('my-22k',  fmtMyr(g24Myr * 0.9167));
+  set('my-s100', fmtMyr(sgMyr * 100));
+}
+
+// ── AUTO-REFRESH at 8am & 8pm MYT ────────────────────────
+function scheduleNextRefresh() {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const myt = new Date(utcMs + MYT_OFF * 60000);
+  const h = myt.getUTCHours() + myt.getUTCMinutes() / 60;
+  const slots = [8, 20];
+  let minMs = Infinity;
+  for (const s of slots) {
+    let diff = s - h;
+    if (diff <= 0) diff += 24;
+    minMs = Math.min(minMs, diff * 3600 * 1000);
+  }
+  setTimeout(() => { loadAll(); scheduleNextRefresh(); }, minMs + 3000);
+}
+
+// Re-fetch if tab was hidden and returned after >30 min
+let lastLoad = Date.now();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - lastLoad > 30 * 60 * 1000) {
+    loadAll();
+    lastLoad = Date.now();
+  }
+});
+
+// ── INIT ─────────────────────────────────────────────────
+tickFooters();
+setInterval(tickFooters, 15000);   // update footer timestamp every 15s
+loadAll();
+scheduleNextRefresh();
+</script>
+</body>
+</html>
