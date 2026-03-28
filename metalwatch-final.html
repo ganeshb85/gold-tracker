@@ -236,25 +236,35 @@ body {
 .card-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 9px 16px;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 16px;
   border-top: 1px solid #e0e4ff;
   background: #fafbff;
 }
 
 .footer-asof {
   font-size: 0.68rem;
-  color: #6366a8;
+  color: #9999bb;
   font-weight: 500;
   font-style: italic;
 }
 
-.footer-datetime {
-  font-size: 0.7rem;
+.footer-date {
+  font-size: 0.68rem;
   font-weight: 700;
   color: #3730a3;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
+}
+
+.footer-session {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #6366a8;
+  background: #ede9fe;
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.04em;
 }
 
 /* ── FOOTNOTE ─────────────────────────────── */
@@ -296,32 +306,6 @@ body {
     </div>
   </div>
 
-  <!-- FX STRIP -->
-  <div class="fx-strip">
-    <div class="fx-cell">
-      <div class="fx-pair">MYR / INR</div>
-      <div class="fx-rate" id="fx-myr-inr"><span class="skel"></span></div>
-      <div class="fx-meta">
-        <span class="fx-chg" id="fx-myr-inr-c"></span>
-        <span class="fx-wise-tag">≈ Wise</span>
-      </div>
-    </div>
-    <div class="fx-cell">
-      <div class="fx-pair">USD / INR</div>
-      <div class="fx-rate" id="fx-usd-inr"><span class="skel"></span></div>
-      <div class="fx-meta">
-        <span class="fx-chg" id="fx-usd-inr-c"></span>
-      </div>
-    </div>
-    <div class="fx-cell">
-      <div class="fx-pair">USD / MYR</div>
-      <div class="fx-rate" id="fx-usd-myr"><span class="skel"></span></div>
-      <div class="fx-meta">
-        <span class="fx-chg" id="fx-usd-myr-c"></span>
-      </div>
-    </div>
-  </div>
-
   <!-- CARDS -->
   <div class="cards-body">
 
@@ -353,7 +337,8 @@ body {
       </div>
       <div class="card-footer">
         <span class="footer-asof">As of</span>
-        <span class="footer-datetime" id="in-footer">—</span>
+        <span class="footer-date" id="in-footer-date">—</span>
+        <span class="footer-session" id="in-footer-session"></span>
       </div>
     </div>
 
@@ -385,15 +370,40 @@ body {
       </div>
       <div class="card-footer">
         <span class="footer-asof">As of</span>
-        <span class="footer-datetime" id="my-footer">—</span>
+        <span class="footer-date" id="my-footer-date">—</span>
       </div>
     </div>
 
   </div>
 
+  <!-- FX STRIP — moved to bottom -->
+  <div class="fx-strip" style="border-top:1px solid #e0e4ff; border-bottom:none;">
+    <div class="fx-cell">
+      <div class="fx-pair">MYR / INR</div>
+      <div class="fx-rate" id="fx-myr-inr"><span class="skel"></span></div>
+      <div class="fx-meta">
+        <span class="fx-chg" id="fx-myr-inr-c"></span>
+        <span class="fx-wise-tag">≈ Wise</span>
+      </div>
+    </div>
+    <div class="fx-cell">
+      <div class="fx-pair">USD / INR</div>
+      <div class="fx-rate" id="fx-usd-inr"><span class="skel"></span></div>
+      <div class="fx-meta">
+        <span class="fx-chg" id="fx-usd-inr-c"></span>
+      </div>
+    </div>
+    <div class="fx-cell">
+      <div class="fx-pair">USD / MYR</div>
+      <div class="fx-rate" id="fx-usd-myr"><span class="skel"></span></div>
+      <div class="fx-meta">
+        <span class="fx-chg" id="fx-usd-myr-c"></span>
+      </div>
+    </div>
+  </div>
+
   <div class="footnote">
-    Gold & Silver prices from goodreturns.in (Chennai / Malaysia retail rates)<br>
-    FX via Yahoo Finance · MYR/INR = Yahoo raw × 1.013 (–2.62% Yahoo gap + 1.26% Wise fee) · USD/INR derived
+    Prices from goodreturns.in · FX via Yahoo Finance · MYR/INR ≈ Wise send rate
   </div>
 
 </div>
@@ -436,10 +446,41 @@ function fmtMyr(n, dec = 2) {
   return 'RM\u202f' + n.toLocaleString('en-MY', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-// ── FOOTERS (live clock) ───────────────────────────────────
+// ── FOOTERS — date only, no time ──────────────────────────
+// India: shows date + Morning/Evening badge based on IBJA AM/PM schedule
+//   AM rate available from 11:00 IST → show "Morning"
+//   PM rate available from 17:00 IST → show "Evening"
+//   Before 11:00 IST → show "Previous close" (carry-over from last session)
+// Malaysia: shows date only (updates at midnight MYT)
+
+function localDate(tzOffMin) {
+  const now   = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const d     = new Date(utcMs + tzOffMin * 60000);
+  return d.toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'
+  });
+}
+
+function istSession() {
+  const now   = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const ist   = new Date(utcMs + IST_OFF * 60000);
+  const h     = ist.getUTCHours() + ist.getUTCMinutes() / 60;
+  const dow   = ist.getUTCDay(); // 0=Sun
+
+  if (dow === 0 || dow === 6) return 'Weekend';
+  if (h < 11)  return 'Prev close';
+  if (h < 17)  return 'Morning';
+  return 'Evening';
+}
+
 function tickFooters() {
-  setTxt('in-footer', localDatetime(IST_OFF));
-  setTxt('my-footer', localDatetime(MYT_OFF));
+  setTxt('in-footer-date', localDate(IST_OFF));
+  setTxt('my-footer-date', localDate(MYT_OFF));
+
+  const sessionEl = document.getElementById('in-footer-session');
+  if (sessionEl) sessionEl.textContent = istSession();
 }
 
 // ── yPrice() — EXACT COPY FROM FOLIO TRACKER ──────────────
@@ -469,11 +510,15 @@ async function yPrice(t) {
 // MYR/INR: Yahoo runs ~2.62% below Wise mid-market, Wise charges ~1.26% fee.
 // Combined multiplier 1.013 matches actual Wise transfer outcome within ±5 INR.
 async function fetchFX() {
-  const usdmyr   = await yPrice('USDMYR=X') || 4.43;
-  const rawMyInr = await yPrice('MYRINR=X') || 22.9;
-  const myrinr   = Math.round(rawMyInr * 1.013 * 10000) / 10000;
-  // USD/INR derived from the two Yahoo rates (not fetched separately)
-  const usdinr   = usdmyr * rawMyInr;
+  const usdmyr   = await yPrice('USDMYR=X');
+  const rawMyInr = await yPrice('MYRINR=X');
+
+  // If either rate is unavailable, return null — we will show an error state
+  // rather than display a misleading stale or hardcoded number.
+  if (!usdmyr || !rawMyInr) return null;
+
+  const myrinr = Math.round(rawMyInr * 1.013 * 10000) / 10000;
+  const usdinr = usdmyr * rawMyInr;
   return { usdmyr, myrinr, myrinr_raw: rawMyInr, usdinr };
 }
 
@@ -527,7 +572,19 @@ async function fetchGoldPrices() {
 }
 
 // ── RENDER FX STRIP ───────────────────────────────────────
+// fx is null when Yahoo is unreachable — show explicit "unavailable" state
 function renderFX(fx) {
+  if (!fx) {
+    setTxt('fx-myr-inr', '—');
+    setTxt('fx-usd-inr', '—');
+    setTxt('fx-usd-myr', '—');
+    // Dim the wise tag to signal unavailability
+    const wiseTag = document.querySelector('.fx-wise-tag');
+    if (wiseTag) { wiseTag.textContent = 'unavailable'; wiseTag.style.background = '#fee2e2'; wiseTag.style.color = '#dc2626'; }
+    return;
+  }
+  const wiseTag = document.querySelector('.fx-wise-tag');
+  if (wiseTag) { wiseTag.textContent = '≈ Wise'; wiseTag.style.background = ''; wiseTag.style.color = ''; }
   setTxt('fx-myr-inr', fx.myrinr.toFixed(4));
   setTxt('fx-usd-inr', fx.usdinr.toFixed(2));
   setTxt('fx-usd-myr', fx.usdmyr.toFixed(4));
@@ -561,14 +618,22 @@ async function loadAll(manual = false) {
 
   if (fx) {
     renderFX(fx);
-    // Cache FX
+    // Cache only on successful fetch
     try { localStorage.setItem('mw_fx_cache', JSON.stringify({ ...fx, ts: Date.now() })); } catch(e) {}
   } else {
-    // Try FX cache
+    // Try a recent localStorage cache (under 12h old) before showing error
+    let recovered = false;
     try {
-      const c = JSON.parse(localStorage.getItem('mw_fx_cache') || 'null');
-      if (c) renderFX(c);
+      const cached = JSON.parse(localStorage.getItem('mw_fx_cache') || 'null');
+      if (cached && (Date.now() - cached.ts) < 12 * 60 * 60 * 1000) {
+        renderFX(cached);
+        recovered = true;
+        // Show a subtle stale indicator on the wise tag
+        const wiseTag = document.querySelector('.fx-wise-tag');
+        if (wiseTag) { wiseTag.textContent = 'cached'; wiseTag.style.background = '#fef9c3'; wiseTag.style.color = '#92400e'; }
+      }
     } catch(e) {}
+    if (!recovered) renderFX(null); // show — dashes
   }
 
   if (gold && (gold.in24k || gold.my24k)) {
@@ -697,7 +762,6 @@ document.addEventListener('visibilitychange', () => {
 
 // ── INIT ──────────────────────────────────────────────────
 tickFooters();
-setInterval(tickFooters, 15000);
 loadAll();
 scheduleNextRefresh();
 </script>
