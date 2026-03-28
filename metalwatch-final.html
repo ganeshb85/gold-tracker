@@ -662,53 +662,56 @@ async function fetchFX() {
 }
 
 // ── fetchGoldPrices ────────────────────────────────────────────────────────
-// All prices derived from Yahoo Finance GC=F (gold futures) + SI=F (silver)
-// via the existing yahoo-proxy edge function. No scraping needed.
+// Routes through the gold-proxy Supabase edge function.
+// gold-proxy calls data-asg.goldprice.org — a stable JSON API that returns
+// spot gold/silver prices natively in INR and MYR. No scraping, no FX math.
+// The edge function applies retail factors (duty, GST) and returns ready-to-display values.
 //
-// India 24K:
-//   GC=F (USD/oz) × USDINR × 1.0918
-//   Factor 1.0918 = import duty (6%) × GST (3%) = 1.06 × 1.03
-//   Gives ~₹14,743/g vs Chennai retail ₹14,651 — within 0.6%
-//
-// India Silver:
-//   SI=F (USD/oz) × USDINR × 1.03  (GST only, no import duty on silver bullion)
-//
-// Malaysia 24K:
-//   GC=F × USDMYR — spot conversion, no import duty on gold in Malaysia
-//   Malaysian jeweller prices track international spot closely
-//
-// 22K = 24K × 0.9167 (standard 916 purity)
+// Response shape: { gold24k, gold22k, silver, currency, source, date }
 async function fetchGoldPrices() {
-  const OZ           = 31.1035;  // troy oz to grams
-  const INDIA_FACTOR = 1.06 * 1.03;  // import duty 6% + GST 3% = 1.0918
-
-  const [goldUsd, silverUsd, usdInr, usdMyr] = await Promise.all([
-    yPrice('GC=F'),       // Gold futures USD/oz
-    yPrice('SI=F'),       // Silver futures USD/oz
-    yPrice('USDINR=X'),   // USD/INR
-    yPrice('USDMYR=X'),   // USD/MYR
-  ]);
-
-  if (!goldUsd || !usdInr || !usdMyr) {
-    console.warn('[GoldPulse] Missing core prices — goldUsd:', goldUsd, 'usdInr:', usdInr, 'usdMyr:', usdMyr);
-    return { in24k: null, in22k: null, inSilver: null, my24k: null, my22k: null, mySilver: null };
-  }
-
-  const gold24Inr = (goldUsd / OZ) * usdInr * INDIA_FACTOR;
-  const gold24Myr = (goldUsd / OZ) * usdMyr;
-  const silvInr   = silverUsd ? (silverUsd / OZ) * usdInr * 1.03 : null;
-  const silvMyr   = silverUsd ? (silverUsd / OZ) * usdMyr : null;
-
   const results = {
-    in24k:    gold24Inr,
-    in22k:    gold24Inr * 0.9167,
-    inSilver: silvInr,
-    my24k:    gold24Myr,
-    my22k:    gold24Myr * 0.9167,
-    mySilver: silvMyr,
+    in24k: null, in22k: null, inSilver: null,
+    my24k: null, my22k: null, mySilver: null,
   };
 
-  console.debug('[GoldPulse] Gold results:', results);
+  const headers = { Authorization: `Bearer ${SB_KEY}` };
+
+  async function callProxy(market) {
+    const res = await fetchWithTimeout(
+      `${SB_URL}/functions/v1/gold-proxy?market=${market}`, { headers }
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status} — ${body}`);
+    }
+    return res.json();
+  }
+
+  await Promise.allSettled([
+
+    // India — returns INR prices with import duty + GST applied
+    callProxy('india')
+      .then(d => {
+        console.debug('[GoldPulse] India:', d);
+        if (d.gold24k) results.in24k    = d.gold24k;
+        if (d.gold22k) results.in22k    = d.gold22k;
+        if (d.silver)  results.inSilver = d.silver;
+      })
+      .catch(e => console.error('[GoldPulse] India failed:', e.message)),
+
+    // Malaysia — returns MYR prices with jeweller factor applied
+    callProxy('malaysia')
+      .then(d => {
+        console.debug('[GoldPulse] Malaysia:', d);
+        if (d.gold24k) results.my24k    = d.gold24k;
+        if (d.gold22k) results.my22k    = d.gold22k;
+        if (d.silver)  results.mySilver = d.silver;
+      })
+      .catch(e => console.error('[GoldPulse] Malaysia failed:', e.message)),
+
+  ]);
+
+  console.debug('[GoldPulse] Final results:', results);
   return results;
 }
 
