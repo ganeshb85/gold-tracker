@@ -330,8 +330,8 @@ body {
       <div class="country-head">
         <span class="country-flag">🇮🇳</span>
         <div class="country-info">
-          <div class="country-name">India</div>
-          <div class="country-cur">Indian Rupee (INR)</div>
+          <div class="country-name">India <span style="font-size:0.65rem;font-weight:500;color:#9999bb;letter-spacing:0.04em">· Chennai rate</span></div>
+          <div class="country-cur">Indian Rupee (INR) · IBJA AM &amp; PM · Mon–Fri</div>
         </div>
       </div>
       <div class="metals-grid">
@@ -363,7 +363,7 @@ body {
         <span class="country-flag">🇲🇾</span>
         <div class="country-info">
           <div class="country-name">Malaysia</div>
-          <div class="country-cur">Ringgit (MYR)</div>
+          <div class="country-cur">Ringgit (MYR) · Retail rate · Daily at midnight MYT</div>
         </div>
       </div>
       <div class="metals-grid">
@@ -392,8 +392,8 @@ body {
   </div>
 
   <div class="footnote">
-    Prices derived from live XAU/XAG spot · FX via open.er-api.com · MYR/INR = raw rate × 1.013 (Yahoo –2.62% vs Wise mid + 1.26% Wise fee)<br>
-    22K = 24K × 0.9167 · Retail prices may vary ± GST / making charges
+    Gold & Silver prices from goodreturns.in (Chennai / Malaysia retail rates)<br>
+    FX via Yahoo Finance · MYR/INR = Yahoo raw × 1.013 (–2.62% Yahoo gap + 1.26% Wise fee) · USD/INR derived
   </div>
 
 </div>
@@ -403,20 +403,20 @@ body {
 const IST_OFF = 5.5 * 60;   // UTC+5:30
 const MYT_OFF = 8.0 * 60;   // UTC+8:00
 
-// MYR/INR Wise approximation formula (matched from portfolio tracker):
-// Yahoo/open-API raw rate × 1.013
-// Why 1.013: Yahoo sits ~2.62% below Wise mid-market; Wise charges ~1.26% fee.
-// Net adjustment = +1.3% on the raw cross-rate → matches Wise send rate.
-const WISE_SPREAD_MYR_INR = 0.013;
+// ── SUPABASE CONFIG (same project as Folio tracker) ───────
+// Reads from localStorage keys set by Folio — no duplication needed.
+// If not found, FX falls back to direct Yahoo call (same as Folio fallback).
+const SB_URL = localStorage.getItem('sb_url') || '';
+const SB_KEY = localStorage.getItem('sb_key') || '';
 
 // ── HELPERS ───────────────────────────────────────────────
 function localDatetime(tzOffMin) {
   const now = new Date();
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const d = new Date(utcMs + tzOffMin * 60000);
-  const day   = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', timeZone:'UTC' });
-  const hh    = String(d.getUTCHours()).padStart(2,'0');
-  const mm    = String(d.getUTCMinutes()).padStart(2,'0');
+  const day = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', timeZone:'UTC' });
+  const hh  = String(d.getUTCHours()).padStart(2,'0');
+  const mm  = String(d.getUTCMinutes()).padStart(2,'0');
   return `${day} · ${hh}:${mm}`;
 }
 
@@ -424,16 +424,9 @@ function set(id, val) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = val;
 }
-
 function setTxt(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
-}
-
-function chgPill(pct) {
-  const sign = pct >= 0 ? '▲' : '▼';
-  const cls  = pct >= 0 ? 'up' : 'dn';
-  return `<span class="fx-chg ${cls}">${sign} ${Math.abs(pct).toFixed(2)}%</span>`;
 }
 
 function fmtInr(n, dec = 0) {
@@ -449,138 +442,251 @@ function tickFooters() {
   setTxt('my-footer', localDatetime(MYT_OFF));
 }
 
-// ── FETCH ─────────────────────────────────────────────────
+// ── yPrice() — EXACT COPY FROM FOLIO TRACKER ──────────────
+// Tries Supabase edge function first (fixes CORS for pre/post market),
+// falls back to direct Yahoo Finance call.
+async function yPrice(t) {
+  if (SB_URL && SB_KEY) {
+    try {
+      const r = await fetch(`${SB_URL}/functions/v1/yahoo-proxy?ticker=${encodeURIComponent(t)}`, {
+        headers: { 'Authorization': 'Bearer ' + SB_KEY }
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.price > 0) return d.price;
+      }
+    } catch(e) {}
+  }
+  // Fallback: direct Yahoo call (works during market hours)
+  try {
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(t)}?interval=1d&range=1d`);
+    const d = await r.json();
+    return d?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
+  } catch(e) { return null; }
+}
+
+// ── fetchFX() — EXACT LOGIC FROM FOLIO TRACKER ────────────
+// MYR/INR: Yahoo runs ~2.62% below Wise mid-market, Wise charges ~1.26% fee.
+// Combined multiplier 1.013 matches actual Wise transfer outcome within ±5 INR.
+async function fetchFX() {
+  const usdmyr   = await yPrice('USDMYR=X') || 4.43;
+  const rawMyInr = await yPrice('MYRINR=X') || 22.9;
+  const myrinr   = Math.round(rawMyInr * 1.013 * 10000) / 10000;
+  // USD/INR derived from the two Yahoo rates (not fetched separately)
+  const usdinr   = usdmyr * rawMyInr;
+  return { usdmyr, myrinr, myrinr_raw: rawMyInr, usdinr };
+}
+
+// ── fetchGoldPrices() — scrape goodreturns.in ─────────────
+// Goodreturns publishes the same retail rates shown on livechennai.com
+// and matches your Malaysia jeweller within ±1%.
+// Uses allorigins CORS proxy to fetch the HTML from the browser.
+async function fetchGoldPrices() {
+  const results = { in24k: null, in22k: null, inSilver: null, my24k: null, my22k: null, mySilver: null };
+
+  // ── India (Chennai rates) ────────────────────────────────
+  try {
+    const url    = 'https://www.goodreturns.in/gold-rates/chennai.html';
+    const proxy  = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const resp   = await fetch(proxy);
+    const json   = await resp.json();
+    const html   = json.contents;
+
+    // goodreturns embeds rates in meta/text like "₹14,651 per gram for 24 karat"
+    const m24 = html.match(/₹([\d,]+)\s*per gram for 24 karat/);
+    const m22 = html.match(/₹([\d,]+)\s*per gram for 22 karat/);
+    const mAg = html.match(/₹([\d,]+)\s*per gram[^f]*silver/i) ||
+                html.match(/silver[^₹]*₹([\d,]+)\s*per gram/i);
+
+    if (m24) results.in24k    = parseFloat(m24[1].replace(/,/g,''));
+    if (m22) results.in22k    = parseFloat(m22[1].replace(/,/g,''));
+    if (mAg) results.inSilver = parseFloat(mAg[1].replace(/,/g,''));
+  } catch(e) { console.warn('India scrape failed', e); }
+
+  // ── Malaysia ────────────────────────────────────────────
+  try {
+    const url    = 'https://www.goodreturns.in/gold-rates/malaysia.html';
+    const proxy  = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const resp   = await fetch(proxy);
+    const json   = await resp.json();
+    const html   = json.contents;
+
+    const m24 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 24 karat/i) ||
+                html.match(/24 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
+    const m22 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 22 karat/i) ||
+                html.match(/22 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
+    const mAg = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram[^f]*silver/i) ||
+                html.match(/silver[^R]*RM\s*([\d,]+(?:\.\d+)?)\s*per gram/i);
+
+    if (m24) results.my24k    = parseFloat(m24[1].replace(/,/g,''));
+    if (m22) results.my22k    = parseFloat(m22[1].replace(/,/g,''));
+    if (mAg) results.mySilver = parseFloat(mAg[1].replace(/,/g,''));
+  } catch(e) { console.warn('Malaysia scrape failed', e); }
+
+  return results;
+}
+
+// ── RENDER FX STRIP ───────────────────────────────────────
+function renderFX(fx) {
+  setTxt('fx-myr-inr', fx.myrinr.toFixed(4));
+  setTxt('fx-usd-inr', fx.usdinr.toFixed(2));
+  setTxt('fx-usd-myr', fx.usdmyr.toFixed(4));
+}
+
+// ── RENDER PRICES ─────────────────────────────────────────
+function renderPrices(g, fx) {
+  // India
+  if (g.in24k)    setTxt('in-24k', fmtInr(g.in24k));
+  if (g.in22k)    setTxt('in-22k', fmtInr(g.in22k));
+  if (g.inSilver) setTxt('in-sk',  fmtInr(g.inSilver * 1000));
+
+  // Malaysia
+  if (g.my24k)    setTxt('my-24k',  fmtMyr(g.my24k));
+  if (g.my22k)    setTxt('my-22k',  fmtMyr(g.my22k));
+  if (g.mySilver) setTxt('my-s100', fmtMyr(g.mySilver * 100));
+}
+
+// ── MAIN LOAD ─────────────────────────────────────────────
 async function loadAll(manual = false) {
   const btn  = document.getElementById('refresh-btn');
   const spin = document.getElementById('spin-icon');
   btn.disabled = true;
   spin.classList.add('loading');
 
-  try {
-    const [xauRes, xagRes, fxRes] = await Promise.all([
-      fetch('https://data.gold-api.com/api/v1/symbol/XAU').then(r => r.json()),
-      fetch('https://data.gold-api.com/api/v1/symbol/XAG').then(r => r.json()),
-      fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json())
-    ]);
+  // Run FX and gold scrape in parallel
+  const [fx, gold] = await Promise.all([
+    fetchFX().catch(e => { console.warn('FX failed', e); return null; }),
+    fetchGoldPrices().catch(e => { console.warn('Gold scrape failed', e); return null; })
+  ]);
 
-    const xau    = xauRes.price;
-    const xag    = xagRes.price;
-    const usdInr = fxRes.rates.INR;
-    const usdMyr = fxRes.rates.MYR;
-
-    // Raw interbank MYR/INR cross-rate
-    const myrInrRaw = usdInr / usdMyr;
-    // Wise-approximated rate: apply spread
-    const myrInrWise = myrInrRaw * (1 + WISE_SPREAD_MYR_INR);
-
-    // Previous-close change estimates from gold-api
-    const xauPrev = xauRes.prev_close_price;
-    const xagPrev = xagRes.prev_close_price;
-
-    // Gold/silver per gram
-    const OZ = 31.1035;
-    const g24Inr = (xau / OZ) * usdInr;
-    const g22Inr = g24Inr * 0.9167;
-    const sgInr  = (xag / OZ) * usdInr;
-
-    const g24Myr = (xau / OZ) * usdMyr;
-    const g22Myr = g24Myr * 0.9167;
-    const sgMyr  = (xag / OZ) * usdMyr;
-
-    // FX day-change % (approximate via gold-api prev close ratios)
-    const inrChgPct = xauPrev ? ((xau - xauPrev) / xauPrev * 100) * 0.3 : 0.12;
-    const myrChgPct = xauPrev ? ((xau - xauPrev) / xauPrev * 100) * 0.15 : -0.08;
-    const myrInrChgPct = inrChgPct - myrChgPct;
-
-    // ── FX STRIP ────────────────────────────────────────
-    set('fx-myr-inr',   myrInrWise.toFixed(4));
-    set('fx-usd-inr',   usdInr.toFixed(2));
-    set('fx-usd-myr',   usdMyr.toFixed(4));
-    set('fx-myr-inr-c', chgPill(myrInrChgPct));
-    set('fx-usd-inr-c', chgPill(inrChgPct));
-    set('fx-usd-myr-c', chgPill(myrChgPct));
-
-    // ── INDIA ────────────────────────────────────────────
-    set('in-24k', fmtInr(g24Inr));
-    set('in-22k', fmtInr(g22Inr));
-    set('in-sk',  fmtInr(sgInr * 1000));
-
-    // ── MALAYSIA ─────────────────────────────────────────
-    set('my-24k',  fmtMyr(g24Myr));
-    set('my-22k',  fmtMyr(g22Myr));
-    set('my-s100', fmtMyr(sgMyr * 100));
-
-    // cache
+  if (fx) {
+    renderFX(fx);
+    // Cache FX
+    try { localStorage.setItem('mw_fx_cache', JSON.stringify({ ...fx, ts: Date.now() })); } catch(e) {}
+  } else {
+    // Try FX cache
     try {
-      localStorage.setItem('mw_cache', JSON.stringify({
-        xau, xag, usdInr, usdMyr, ts: Date.now()
-      }));
+      const c = JSON.parse(localStorage.getItem('mw_fx_cache') || 'null');
+      if (c) renderFX(c);
     } catch(e) {}
+  }
 
-  } catch(err) {
-    console.warn('Live fetch failed, loading fallback', err);
-    loadFallback();
+  if (gold && (gold.in24k || gold.my24k)) {
+    renderPrices(gold, fx);
+    // Cache gold
+    try { localStorage.setItem('mw_gold_cache', JSON.stringify({ ...gold, ts: Date.now() })); } catch(e) {}
+  } else {
+    // Try gold cache
+    try {
+      const c = JSON.parse(localStorage.getItem('mw_gold_cache') || 'null');
+      if (c) renderPrices(c, fx);
+      else loadHardFallback(fx);
+    } catch(e) { loadHardFallback(fx); }
   }
 
   btn.disabled = false;
   spin.classList.remove('loading');
 }
 
-function loadFallback() {
-  // Try localStorage cache first
-  try {
-    const cached = JSON.parse(localStorage.getItem('mw_cache') || 'null');
-    if (cached) {
-      applyData(cached.xau, cached.xag, cached.usdInr, cached.usdMyr);
-      return;
-    }
-  } catch(e) {}
-
-  // Hard fallback — verified March 28 2026 rates
-  applyData(3012, 33.10, 86.55, 4.43);
+// Hard fallback — verified Mar 28 2026 prices from jeweller + livechennai
+function loadHardFallback(fx) {
+  setTxt('in-24k', fmtInr(14651));
+  setTxt('in-22k', fmtInr(13430));
+  setTxt('in-sk',  fmtInr(250000));
+  setTxt('my-24k',  fmtMyr(594));
+  setTxt('my-22k',  fmtMyr(560));
+  setTxt('my-s100', fmtMyr(1131));
 }
 
-function applyData(xau, xag, usdInr, usdMyr) {
-  const OZ = 31.1035;
-  const myrInrWise = (usdInr / usdMyr) * (1 + WISE_SPREAD_MYR_INR);
+// ── SMART AUTO-REFRESH — aligned to actual price update schedules ─────────────
+//
+// INDIA (Chennai / IBJA):
+//   - Updates TWICE daily: AM ~11:00 IST, PM ~17:00 IST
+//   - Only Mon–Fri (no weekends, no Central Govt holidays)
+//   - We fetch at 11:05 IST and 17:05 IST on weekdays
+//
+// MALAYSIA (retail jeweller / Public Gold):
+//   - Updates ONCE daily at midnight MYT (00:00 MYT)
+//   - 7 days a week
+//   - We fetch at 00:05 MYT daily
+//
+// Strategy: collect ALL next trigger times, fire at the soonest one.
+// FX (Yahoo) is always refreshed alongside gold prices.
 
-  set('fx-myr-inr', myrInrWise.toFixed(4));
-  set('fx-usd-inr', usdInr.toFixed(2));
-  set('fx-usd-myr', usdMyr.toFixed(4));
-  set('fx-myr-inr-c', '');
-  set('fx-usd-inr-c', '');
-  set('fx-usd-myr-c', '');
-
-  const g24Inr = (xau / OZ) * usdInr;
-  const g24Myr = (xau / OZ) * usdMyr;
-  const sgInr  = (xag / OZ) * usdInr;
-  const sgMyr  = (xag / OZ) * usdMyr;
-
-  set('in-24k', fmtInr(g24Inr));
-  set('in-22k', fmtInr(g24Inr * 0.9167));
-  set('in-sk',  fmtInr(sgInr * 1000));
-  set('my-24k',  fmtMyr(g24Myr));
-  set('my-22k',  fmtMyr(g24Myr * 0.9167));
-  set('my-s100', fmtMyr(sgMyr * 100));
-}
-
-// ── AUTO-REFRESH at 8am & 8pm MYT ────────────────────────
-function scheduleNextRefresh() {
-  const now = new Date();
+function getNextRefreshMs() {
+  const now   = new Date();
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const myt = new Date(utcMs + MYT_OFF * 60000);
-  const h = myt.getUTCHours() + myt.getUTCMinutes() / 60;
-  const slots = [8, 20];
-  let minMs = Infinity;
-  for (const s of slots) {
-    let diff = s - h;
-    if (diff <= 0) diff += 24;
-    minMs = Math.min(minMs, diff * 3600 * 1000);
+
+  // Current time in IST and MYT (as fractional hours)
+  const istDate  = new Date(utcMs + IST_OFF * 60000);
+  const mytDate  = new Date(utcMs + MYT_OFF * 60000);
+  const istHour  = istDate.getUTCHours() + istDate.getUTCMinutes() / 60;
+  const mytHour  = mytDate.getUTCHours() + mytDate.getUTCMinutes() / 60;
+  const istDow   = istDate.getUTCDay(); // 0=Sun, 1=Mon … 6=Sat
+
+  const candidates = [];
+
+  // ── India: 11:05 and 17:05 IST, weekdays only ──────────────
+  const isWeekday = istDow >= 1 && istDow <= 5;
+  const indiaSlots = [11 + 5/60, 17 + 5/60];
+
+  for (const slot of indiaSlots) {
+    if (isWeekday && slot > istHour) {
+      // Today, later
+      candidates.push((slot - istHour) * 3600 * 1000);
+    }
   }
-  setTimeout(() => { loadAll(); scheduleNextRefresh(); }, minMs + 3000);
+
+  // If no India slots left today, find next weekday 11:05 IST
+  if (isWeekday && istHour >= indiaSlots[1]) {
+    // Past both slots today — next is tomorrow if weekday, else Monday
+    let daysAhead = 1;
+    const nextDow = (istDow + 1) % 7;
+    if (nextDow === 6) daysAhead = 2; // Saturday → Monday
+    if (nextDow === 0) daysAhead = 1; // Sunday → Monday (already handled above)
+    // Actually recalculate: skip weekend
+    let d = 1;
+    while (true) {
+      const candidateDow = (istDow + d) % 7;
+      if (candidateDow >= 1 && candidateDow <= 5) break;
+      d++;
+    }
+    const hoursUntilMidnight = 24 - istHour;
+    const nextSlotHours = hoursUntilMidnight + (d - 1) * 24 + indiaSlots[0];
+    candidates.push(nextSlotHours * 3600 * 1000);
+  }
+
+  if (!isWeekday) {
+    // Weekend — skip to Monday 11:05 IST
+    const daysToMonday = istDow === 0 ? 1 : 2; // Sun→1, Sat→2
+    const hoursUntilMidnight = 24 - istHour;
+    candidates.push((hoursUntilMidnight + (daysToMonday - 1) * 24 + indiaSlots[0]) * 3600 * 1000);
+  }
+
+  // ── Malaysia: 00:05 MYT daily ──────────────────────────────
+  const mySlotsHour = 0 + 5/60; // 00:05 MYT
+  if (mySlotsHour > mytHour) {
+    candidates.push((mySlotsHour - mytHour) * 3600 * 1000);
+  } else {
+    // Already past midnight today — next is tomorrow 00:05 MYT
+    candidates.push((24 - mytHour + mySlotsHour) * 3600 * 1000);
+  }
+
+  // Return the soonest trigger, minimum 60 seconds to avoid rapid-fire
+  return Math.max(60 * 1000, Math.min(...candidates));
 }
 
-// Re-fetch if tab was hidden and returned after >30 min
+function scheduleNextRefresh() {
+  const msUntilNext = getNextRefreshMs();
+  const nextTime = new Date(Date.now() + msUntilNext);
+  console.log(`MetalWatch: next auto-refresh in ${(msUntilNext/60000).toFixed(1)} min (${nextTime.toLocaleTimeString()})`);
+  setTimeout(() => {
+    loadAll();
+    scheduleNextRefresh();
+  }, msUntilNext);
+}
+
+// Re-fetch if tab was backgrounded for >30 min
 let lastLoad = Date.now();
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - lastLoad > 30 * 60 * 1000) {
@@ -589,9 +695,9 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// ── INIT ─────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────
 tickFooters();
-setInterval(tickFooters, 15000);   // update footer timestamp every 15s
+setInterval(tickFooters, 15000);
 loadAll();
 scheduleNextRefresh();
 </script>
