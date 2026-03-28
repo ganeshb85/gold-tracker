@@ -3,290 +3,369 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MetalWatch</title>
+<title>GoldPulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Theme 4: Burnished Bronze ── */
+  --hdr-start:  #1c120a;
+  --hdr-mid:    #2e1c0e;
+  --hdr-end:    #3d2510;
+  --app-bg:     #fdf9f4;   /* warm ivory shell */
+  --card-bg:    #ffffff;
+  --border:     #eddece;
+  --text-primary:   #1c100a;
+  --text-muted:     #c4956a;
+  --accent:         #8c4a10;   /* dark amber — dates, FX rates */
+  --tag-bg:         #fff7ed;
+  --tag-color:      #7c2d12;
+  --tag-border:     #f5d0a9;
+  --session-bg:     #fff7ed;
+  --session-color:  #7c2d12;
+  --gold:   #8c4a10;
+  --silver: #4b3728;
+  --white:  #ffffff;
+}
 
 body {
-  font-family: -apple-system, 'Inter', 'Segoe UI', sans-serif;
-  background: #0e0e18;
+  font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  background: #140c06;
   min-height: 100vh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 32px 16px 64px;
+  padding: 40px 16px 80px;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ── APP SHELL ────────────────────────────────────────────── */
 .app-wrap {
   width: 100%;
-  max-width: 680px;
-  background: #f0f2ff;
-  border-radius: 22px;
+  max-width: 660px;
+  background: var(--app-bg);
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 20px 60px rgba(0,0,0,0.55),
+    0 4px 16px rgba(0,0,0,0.3);
 }
 
-/* ── HEADER ───────────────────────────────── */
+/* ── APP HEADER ───────────────────────────────────────────── */
 .app-header {
-  background: linear-gradient(140deg, #1e1b6e 0%, #3730a3 60%, #4338ca 100%);
-  padding: 22px 22px 20px;
-}
-
-.header-row {
+  background: linear-gradient(135deg, var(--hdr-start) 0%, var(--hdr-mid) 55%, var(--hdr-end) 100%);
+  padding: 20px 22px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0;
 }
 
-.brand {}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.brand-text {}
 .brand-name {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #fff;
   letter-spacing: -0.3px;
+  line-height: 1.2;
 }
 .brand-sub {
-  font-size: 0.68rem;
-  color: rgba(255,255,255,0.5);
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.45);
   margin-top: 2px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  font-weight: 500;
 }
 
 .refresh-btn {
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 999px;
-  padding: 6px 14px;
+  padding: 7px 15px;
   font-size: 0.72rem;
   font-weight: 600;
-  color: white;
+  color: rgba(255,255,255,0.9);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s;
+  font-family: inherit;
   letter-spacing: 0.02em;
 }
-.refresh-btn:hover { background: rgba(255,255,255,0.2); }
-.refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.spin { display: inline-block; }
-.spin.loading { animation: spin 0.8s linear infinite; }
+.refresh-btn:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
+.refresh-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.spin { display: inline-block; line-height: 1; }
+.spin.loading { animation: spin 0.75s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── FX STRIP ─────────────────────────────── */
+/* ── CARDS BODY ───────────────────────────────────────────── */
+.cards-body {
+  background: var(--app-bg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── COUNTRY CARD ─────────────────────────────────────────── */
+.country-card {
+  background: var(--white);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(100,50,0,0.08);
+}
+
+.country-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.country-flag {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.country-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.country-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.country-tag {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  background: var(--tag-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--tag-border);
+}
+
+.country-meta {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+/* As-of block — right-aligned in header, top-aligned */
+.country-asof {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.asof-label {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  font-style: italic;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.asof-date {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.1px;
+  line-height: 1.4;
+}
+
+.asof-session {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--session-color);
+  background: var(--session-bg);
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.04em;
+  margin-top: 3px;
+  display: none; /* shown via JS only when non-empty */
+}
+.asof-session.visible { display: inline-block; }
+
+/* ── METALS GRID ──────────────────────────────────────────── */
+.metals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.metal-cell {
+  padding: 14px 16px 12px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.metal-cell:last-child { border-right: none; }
+
+.metal-lbl {
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.metal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.gold-dot { background: linear-gradient(135deg, #fbbf24, #b45309); }
+.silver-dot { background: linear-gradient(135deg, #d1d5db, #6b7280); }
+
+.metal-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.metal-price.gold   { color: var(--gold); }
+.metal-price.silver { color: var(--silver); }
+
+.metal-unit {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: auto;
+}
+
+/* skeleton loader */
+.skel {
+  display: inline-block;
+  background: linear-gradient(90deg, #f5ede0 25%, #fdf4ea 50%, #f5ede0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 5px;
+  height: 1.15rem;
+  width: 72px;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── FX STRIP ─────────────────────────────────────────────── */
 .fx-strip {
-  background: #fff;
-  border-bottom: 1px solid #e0e4ff;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;          /* matches country cards */
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(100,50,0,0.08);
   display: flex;
 }
 
 .fx-cell {
   flex: 1;
-  padding: 11px 14px;
-  border-right: 1px solid #e0e4ff;
+  padding: 9px 12px;            /* tighter than before */
+  border-right: 1px solid var(--border);
   text-align: center;
 }
 .fx-cell:last-child { border-right: none; }
 
 .fx-pair {
   font-size: 0.58rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #9999bb;
-  margin-bottom: 3px;
-  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
 }
 
 .fx-rate {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #3730a3;
-  letter-spacing: -0.3px;
-  font-variant-numeric: tabular-nums;
-}
-
-.fx-meta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.fx-chg {
-  font-size: 0.6rem;
-  font-weight: 600;
-}
-.fx-chg.up { color: #16a34a; }
-.fx-chg.dn { color: #dc2626; }
-
-.fx-wise-tag {
-  font-size: 0.55rem;
-  background: #ede9fe;
-  color: #6d28d9;
-  border-radius: 3px;
-  padding: 1px 4px;
+  font-size: 0.92rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-/* ── CARDS BODY ───────────────────────────── */
-.cards-body {
-  background: #f0f2ff;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* ── COUNTRY CARD ─────────────────────────── */
-.country-card {
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e0e4ff;
-  overflow: hidden;
-}
-
-.country-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 13px 16px 11px;
-  border-bottom: 1px solid #e0e4ff;
-}
-
-.country-flag { font-size: 1.5rem; }
-
-.country-info {}
-.country-name {
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: #14143a;
+  color: var(--accent);
   letter-spacing: -0.2px;
-}
-.country-cur {
-  font-size: 0.65rem;
-  color: #9999bb;
-  margin-top: 1px;
-}
-
-/* ── METALS GRID ──────────────────────────── */
-.metals-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
-.metal-cell {
-  padding: 13px 16px 12px;
-  border-right: 1px solid #e0e4ff;
-}
-.metal-cell:last-child { border-right: none; }
-
-.metal-lbl {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: #9999bb;
-  margin-bottom: 5px;
-  font-weight: 600;
-}
-
-.metal-icon {
-  display: inline-block;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  margin-right: 4px;
-  vertical-align: middle;
-  position: relative;
-  top: -1px;
-}
-.gold-dot { background: linear-gradient(135deg, #f5c842, #b8860b); }
-.silver-dot { background: linear-gradient(135deg, #d1d5db, #9ca3af); }
-
-.metal-price {
-  font-size: 1.08rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
 }
-.metal-price.gold { color: #92400e; }
-.metal-price.silver { color: #4b5563; }
 
-.metal-unit {
-  font-size: 0.6rem;
-  color: #b0b4cc;
+.fx-tag {
+  display: inline-block;
+  font-size: 0.55rem;
+  font-weight: 700;
+  background: var(--tag-bg);
+  color: var(--tag-color);
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: 0.05em;
   margin-top: 3px;
 }
 
-/* skeleton */
-.skel {
-  display: inline-block;
-  background: linear-gradient(90deg, #e5e7f5 25%, #eff0fa 50%, #e5e7f5 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 4px;
-  height: 1rem;
-  width: 70px;
-}
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-
-/* ── CARD FOOTER ──────────────────────────── */
-.card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 8px 16px;
-  border-top: 1px solid #e0e4ff;
-  background: #fafbff;
-}
-
-.footer-asof {
-  font-size: 0.68rem;
-  color: #9999bb;
-  font-weight: 500;
-  font-style: italic;
-}
-
-.footer-date {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #3730a3;
-  font-variant-numeric: tabular-nums;
-}
-
-.footer-session {
-  font-size: 0.62rem;
-  font-weight: 600;
-  color: #6366a8;
-  background: #ede9fe;
-  border-radius: 4px;
-  padding: 1px 5px;
-  letter-spacing: 0.04em;
-}
-
-/* ── FOOTNOTE ─────────────────────────────── */
+/* ── FOOTNOTE ─────────────────────────────────────────────── */
 .footnote {
   text-align: center;
-  padding: 10px 16px 14px;
-  font-size: 0.62rem;
-  color: #9999bb;
-  background: #f0f2ff;
-  line-height: 1.6;
+  padding: 11px 20px 15px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--app-bg);
+  letter-spacing: 0.02em;
+  line-height: 1.7;
+  border-top: 1px solid var(--border);
 }
-.footnote a { color: #6366f1; text-decoration: none; }
 
+/* ── RESPONSIVE ───────────────────────────────────────────── */
 @media (max-width: 420px) {
-  .metals-grid { grid-template-columns: 1fr 1fr; }
+  body { padding: 0 0 40px; }
+  .app-wrap { border-radius: 0; box-shadow: none; }
+  .metals-grid { grid-template-columns: repeat(2, 1fr); }
   .metal-cell:nth-child(2) { border-right: none; }
   .metal-cell:nth-child(3) {
     border-right: none;
-    border-top: 1px solid #e0e4ff;
+    border-top: 1px solid var(--border);
     grid-column: 1 / -1;
   }
   .fx-rate { font-size: 0.82rem; }
+  .country-asof { display: none; } /* too cramped on small screens */
 }
 </style>
 </head>
@@ -295,15 +374,44 @@ body {
 
   <!-- HEADER -->
   <div class="app-header">
-    <div class="header-row">
-      <div class="brand">
-        <div class="brand-name">🪙 MetalWatch</div>
+    <div class="brand">
+      <div class="brand-icon">
+          <svg width="20" height="16" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="barTop" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#fde68a"/>
+                <stop offset="100%" stop-color="#f59e0b"/>
+              </linearGradient>
+              <linearGradient id="barFace" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#fbbf24"/>
+                <stop offset="60%"  stop-color="#d97706"/>
+                <stop offset="100%" stop-color="#b45309"/>
+              </linearGradient>
+              <linearGradient id="barSide" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stop-color="#92400e"/>
+                <stop offset="100%" stop-color="#b45309"/>
+              </linearGradient>
+            </defs>
+            <!-- top face (trapezoid, lighter) -->
+            <polygon points="4,2 16,2 18,5 2,5" fill="url(#barTop)"/>
+            <!-- front face -->
+            <rect x="2" y="5" width="16" height="9" rx="0.5" fill="url(#barFace)"/>
+            <!-- right side bevel -->
+            <polygon points="18,5 20,3 20,12 18,14" fill="url(#barSide)" opacity="0.7"/>
+            <!-- engraved centre line on front face -->
+            <rect x="5" y="8" width="10" height="0.75" rx="0.3" fill="#92400e" opacity="0.35"/>
+            <!-- shine highlight on top -->
+            <polygon points="5,2.5 13,2.5 14,3.5 4,3.5" fill="white" opacity="0.25"/>
+          </svg>
+        </div>
+      <div class="brand-text">
+        <div class="brand-name">GoldPulse</div>
         <div class="brand-sub">Gold &amp; Silver · India &amp; Malaysia</div>
       </div>
-      <button class="refresh-btn" id="refresh-btn" onclick="loadAll(true)">
-        <span class="spin" id="spin-icon">↻</span> Refresh
-      </button>
     </div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadAll(true)">
+      <span class="spin" id="spin-icon">↻</span> Refresh
+    </button>
   </div>
 
   <!-- CARDS -->
@@ -314,31 +422,34 @@ body {
       <div class="country-head">
         <span class="country-flag">🇮🇳</span>
         <div class="country-info">
-          <div class="country-name">India <span style="font-size:0.65rem;font-weight:500;color:#9999bb;letter-spacing:0.04em">· Chennai rate</span></div>
-          <div class="country-cur">Indian Rupee (INR) · IBJA AM &amp; PM · Mon–Fri</div>
+          <div class="country-name">
+            India
+            <span class="country-tag">Chennai</span>
+          </div>
+          <div class="country-meta">Indian Rupee (INR) · IBJA AM &amp; PM · Mon–Fri</div>
+        </div>
+        <div class="country-asof">
+          <div class="asof-label">As of</div>
+          <div class="asof-date" id="in-asof-date">—</div>
+          <div class="asof-session" id="in-asof-session"></div>
         </div>
       </div>
       <div class="metals-grid">
         <div class="metal-cell">
-          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 24K / g</div>
+          <div class="metal-lbl"><span class="metal-dot gold-dot"></span>Gold 24K</div>
           <div class="metal-price gold" id="in-24k"><span class="skel"></span></div>
           <div class="metal-unit">₹ per gram</div>
         </div>
         <div class="metal-cell">
-          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 22K / g</div>
+          <div class="metal-lbl"><span class="metal-dot gold-dot"></span>Gold 22K</div>
           <div class="metal-price gold" id="in-22k"><span class="skel"></span></div>
           <div class="metal-unit">₹ per gram</div>
         </div>
         <div class="metal-cell">
-          <div class="metal-lbl"><span class="metal-icon silver-dot"></span>Silver / kg</div>
+          <div class="metal-lbl"><span class="metal-dot silver-dot"></span>Silver</div>
           <div class="metal-price silver" id="in-sk"><span class="skel"></span></div>
-          <div class="metal-unit">₹ per kg</div>
+          <div class="metal-unit">₹ per 100g</div>
         </div>
-      </div>
-      <div class="card-footer">
-        <span class="footer-asof">As of</span>
-        <span class="footer-date" id="in-footer-date">—</span>
-        <span class="footer-session" id="in-footer-session"></span>
       </div>
     </div>
 
@@ -348,422 +459,393 @@ body {
         <span class="country-flag">🇲🇾</span>
         <div class="country-info">
           <div class="country-name">Malaysia</div>
-          <div class="country-cur">Ringgit (MYR) · Retail rate · Daily at midnight MYT</div>
+          <div class="country-meta">Ringgit (MYR) · Daily at midnight MYT</div>
+        </div>
+        <div class="country-asof">
+          <div class="asof-label">As of</div>
+          <div class="asof-date" id="my-asof-date">—</div>
         </div>
       </div>
       <div class="metals-grid">
         <div class="metal-cell">
-          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 24K / g</div>
+          <div class="metal-lbl"><span class="metal-dot gold-dot"></span>Gold 24K</div>
           <div class="metal-price gold" id="my-24k"><span class="skel"></span></div>
           <div class="metal-unit">RM per gram</div>
         </div>
         <div class="metal-cell">
-          <div class="metal-lbl"><span class="metal-icon gold-dot"></span>Gold 22K / g</div>
+          <div class="metal-lbl"><span class="metal-dot gold-dot"></span>Gold 22K</div>
           <div class="metal-price gold" id="my-22k"><span class="skel"></span></div>
           <div class="metal-unit">RM per gram</div>
         </div>
         <div class="metal-cell">
-          <div class="metal-lbl"><span class="metal-icon silver-dot"></span>Silver / 100g</div>
+          <div class="metal-lbl"><span class="metal-dot silver-dot"></span>Silver</div>
           <div class="metal-price silver" id="my-s100"><span class="skel"></span></div>
           <div class="metal-unit">RM per 100g</div>
         </div>
       </div>
-      <div class="card-footer">
-        <span class="footer-asof">As of</span>
-        <span class="footer-date" id="my-footer-date">—</span>
+    </div>
+
+    <!-- FX STRIP — card-shaped, inside the same padding as country cards -->
+    <div class="fx-strip">
+      <div class="fx-cell">
+        <div class="fx-pair">MYR / INR</div>
+        <div class="fx-rate" id="fx-myr-inr"><span class="skel" style="width:52px;height:0.9rem"></span></div>
+        <div class="fx-tag" id="fx-wise-tag">≈ Wise</div>
+      </div>
+      <div class="fx-cell">
+        <div class="fx-pair">USD / INR</div>
+        <div class="fx-rate" id="fx-usd-inr"><span class="skel" style="width:52px;height:0.9rem"></span></div>
+      </div>
+      <div class="fx-cell">
+        <div class="fx-pair">USD / MYR</div>
+        <div class="fx-rate" id="fx-usd-myr"><span class="skel" style="width:52px;height:0.9rem"></span></div>
       </div>
     </div>
 
-  </div>
-
-  <!-- FX STRIP — moved to bottom -->
-  <div class="fx-strip" style="border-top:1px solid #e0e4ff; border-bottom:none;">
-    <div class="fx-cell">
-      <div class="fx-pair">MYR / INR</div>
-      <div class="fx-rate" id="fx-myr-inr"><span class="skel"></span></div>
-      <div class="fx-meta">
-        <span class="fx-chg" id="fx-myr-inr-c"></span>
-        <span class="fx-wise-tag">≈ Wise</span>
-      </div>
-    </div>
-    <div class="fx-cell">
-      <div class="fx-pair">USD / INR</div>
-      <div class="fx-rate" id="fx-usd-inr"><span class="skel"></span></div>
-      <div class="fx-meta">
-        <span class="fx-chg" id="fx-usd-inr-c"></span>
-      </div>
-    </div>
-    <div class="fx-cell">
-      <div class="fx-pair">USD / MYR</div>
-      <div class="fx-rate" id="fx-usd-myr"><span class="skel"></span></div>
-      <div class="fx-meta">
-        <span class="fx-chg" id="fx-usd-myr-c"></span>
-      </div>
-    </div>
   </div>
 
   <div class="footnote">
-    Prices from goodreturns.in · FX via Yahoo Finance · MYR/INR ≈ Wise send rate
+    Prices via goodreturns.in · FX via Yahoo Finance · MYR/INR ≈ Wise send rate
   </div>
 
 </div>
 
 <script>
-// ── CONSTANTS ─────────────────────────────────────────────
-const IST_OFF = 5.5 * 60;   // UTC+5:30
-const MYT_OFF = 8.0 * 60;   // UTC+8:00
+'use strict';
 
-// ── SUPABASE CONFIG (same project as Folio tracker) ───────
-// Reads from localStorage keys set by Folio — no duplication needed.
-// If not found, FX falls back to direct Yahoo call (same as Folio fallback).
-const SB_URL = localStorage.getItem('sb_url') || '';
-const SB_KEY = localStorage.getItem('sb_key') || '';
+// ── CONSTANTS ─────────────────────────────────────────────────────────────
+const IST_OFF   = 5.5 * 60;    // UTC+5:30 in minutes
+const MYT_OFF   = 8.0 * 60;    // UTC+8:00 in minutes
+const GOLD_CACHE_TTL = 14 * 60 * 60 * 1000;  // 14 hours — covers two IBJA sessions
+const FX_CACHE_TTL   = 12 * 60 * 60 * 1000;  // 12 hours
+const FETCH_TIMEOUT  = 10_000;  // 10 second timeout on all fetches
 
-// ── HELPERS ───────────────────────────────────────────────
-function localDatetime(tzOffMin) {
-  const now = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const d = new Date(utcMs + tzOffMin * 60000);
-  const day = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', timeZone:'UTC' });
-  const hh  = String(d.getUTCHours()).padStart(2,'0');
-  const mm  = String(d.getUTCMinutes()).padStart(2,'0');
-  return `${day} · ${hh}:${mm}`;
-}
+// ── DOM HELPERS ────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
 
-function set(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = val;
-}
-function setTxt(id, val) {
-  const el = document.getElementById(id);
+function setText(id, val) {
+  const el = $(id);
   if (el) el.textContent = val;
 }
 
-function fmtInr(n, dec = 0) {
-  return '₹\u202f' + n.toLocaleString('en-IN', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+// ── FORMATTING ─────────────────────────────────────────────────────────────
+function fmtInr(n) {
+  return '₹\u202f' + Math.round(n).toLocaleString('en-IN');
 }
+
 function fmtMyr(n, dec = 2) {
-  return 'RM\u202f' + n.toLocaleString('en-MY', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-}
-
-// ── FOOTERS — date only, no time ──────────────────────────
-// India: shows date + Morning/Evening badge based on IBJA AM/PM schedule
-//   AM rate available from 11:00 IST → show "Morning"
-//   PM rate available from 17:00 IST → show "Evening"
-//   Before 11:00 IST → show "Previous close" (carry-over from last session)
-// Malaysia: shows date only (updates at midnight MYT)
-
-function localDate(tzOffMin) {
-  const now   = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const d     = new Date(utcMs + tzOffMin * 60000);
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'
+  return 'RM\u202f' + n.toLocaleString('en-MY', {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
   });
 }
 
-function istSession() {
-  const now   = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const ist   = new Date(utcMs + IST_OFF * 60000);
-  const h     = ist.getUTCHours() + ist.getUTCMinutes() / 60;
-  const dow   = ist.getUTCDay(); // 0=Sun
+// ── DATE / SESSION ─────────────────────────────────────────────────────────
+function localDate(tzOffMin) {
+  const d = new Date(Date.now() + (new Date().getTimezoneOffset() + tzOffMin) * 60000);
+  return d.toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+  });
+}
 
+// Returns the IBJA session label for the current IST time
+function ibjaSession() {
+  const ist = new Date(Date.now() + (new Date().getTimezoneOffset() + IST_OFF) * 60000);
+  const h   = ist.getUTCHours() + ist.getUTCMinutes() / 60;
+  const dow = ist.getUTCDay();
   if (dow === 0 || dow === 6) return 'Weekend';
   if (h < 11)  return 'Prev close';
   if (h < 17)  return 'Morning';
   return 'Evening';
 }
 
-function tickFooters() {
-  setTxt('in-footer-date', localDate(IST_OFF));
-  setTxt('my-footer-date', localDate(MYT_OFF));
+function updateDateLabels() {
+  setText('in-asof-date', localDate(IST_OFF));
+  setText('my-asof-date', localDate(MYT_OFF));
 
-  const sessionEl = document.getElementById('in-footer-session');
-  if (sessionEl) sessionEl.textContent = istSession();
-}
-
-// ── yPrice() — EXACT COPY FROM FOLIO TRACKER ──────────────
-// Tries Supabase edge function first (fixes CORS for pre/post market),
-// falls back to direct Yahoo Finance call.
-async function yPrice(t) {
-  if (SB_URL && SB_KEY) {
-    try {
-      const r = await fetch(`${SB_URL}/functions/v1/yahoo-proxy?ticker=${encodeURIComponent(t)}`, {
-        headers: { 'Authorization': 'Bearer ' + SB_KEY }
-      });
-      if (r.ok) {
-        const d = await r.json();
-        if (d?.price > 0) return d.price;
-      }
-    } catch(e) {}
+  const session = ibjaSession();
+  const sessionEl = $('in-asof-session');
+  if (sessionEl) {
+    sessionEl.textContent = session;
+    sessionEl.classList.toggle('visible', session.length > 0);
   }
-  // Fallback: direct Yahoo call (works during market hours)
-  try {
-    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(t)}?interval=1d&range=1d`);
-    const d = await r.json();
-    return d?.chart?.result?.[0]?.meta?.regularMarketPrice || null;
-  } catch(e) { return null; }
 }
 
-// ── fetchFX() — EXACT LOGIC FROM FOLIO TRACKER ────────────
-// MYR/INR: Yahoo runs ~2.62% below Wise mid-market, Wise charges ~1.26% fee.
-// Combined multiplier 1.013 matches actual Wise transfer outcome within ±5 INR.
-async function fetchFX() {
-  const usdmyr   = await yPrice('USDMYR=X');
-  const rawMyInr = await yPrice('MYRINR=X');
+// ── FETCH WITH TIMEOUT ─────────────────────────────────────────────────────
+function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
 
-  // If either rate is unavailable, return null — we will show an error state
-  // rather than display a misleading stale or hardcoded number.
+// ── yPrice — mirrors Folio tracker exactly ─────────────────────────────────
+// Reads SB config fresh each call in case Folio set it after this page loaded.
+async function yPrice(ticker) {
+  const sbUrl = localStorage.getItem('sb_url');
+  const sbKey = localStorage.getItem('sb_key');
+
+  // 1. Try Supabase edge function (CORS-safe, works pre/post market)
+  if (sbUrl && sbKey) {
+    try {
+      const res = await fetchWithTimeout(
+        `${sbUrl}/functions/v1/yahoo-proxy?ticker=${encodeURIComponent(ticker)}`,
+        { headers: { Authorization: `Bearer ${sbKey}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.price > 0) return data.price;
+      }
+    } catch (_) { /* fall through to direct call */ }
+  }
+
+  // 2. Direct Yahoo Finance call (works during market hours without CORS issues)
+  try {
+    const res  = await fetchWithTimeout(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`
+    );
+    const data = await res.json();
+    return data?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// ── fetchFX ────────────────────────────────────────────────────────────────
+// Returns null if either rate is unavailable — never falls back to a hardcoded value.
+async function fetchFX() {
+  const [usdmyr, rawMyInr] = await Promise.all([
+    yPrice('USDMYR=X'),
+    yPrice('MYRINR=X'),
+  ]);
+
   if (!usdmyr || !rawMyInr) return null;
 
-  const myrinr = Math.round(rawMyInr * 1.013 * 10000) / 10000;
-  const usdinr = usdmyr * rawMyInr;
-  return { usdmyr, myrinr, myrinr_raw: rawMyInr, usdinr };
+  return {
+    usdmyr,
+    myrinr:     Math.round(rawMyInr * 1.013 * 10000) / 10000,  // Yahoo × 1.013 ≈ Wise send rate
+    myrinr_raw: rawMyInr,
+    usdinr:     usdmyr * rawMyInr,
+  };
 }
 
-// ── fetchGoldPrices() — scrape goodreturns.in ─────────────
-// Goodreturns publishes the same retail rates shown on livechennai.com
-// and matches your Malaysia jeweller within ±1%.
-// Uses allorigins CORS proxy to fetch the HTML from the browser.
+// ── fetchGoldPrices ────────────────────────────────────────────────────────
 async function fetchGoldPrices() {
-  const results = { in24k: null, in22k: null, inSilver: null, my24k: null, my22k: null, mySilver: null };
+  const results = {
+    in24k: null, in22k: null, inSilver: null,
+    my24k: null, my22k: null, mySilver: null,
+  };
 
-  // ── India (Chennai rates) ────────────────────────────────
-  try {
-    const url    = 'https://www.goodreturns.in/gold-rates/chennai.html';
-    const proxy  = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const resp   = await fetch(proxy);
-    const json   = await resp.json();
-    const html   = json.contents;
+  // Scrape via allorigins CORS proxy — no edge function calls for gold prices
+  async function scrape(url) {
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res   = await fetchWithTimeout(proxy);
+    const json  = await res.json();
+    return json.contents || '';
+  }
 
-    // goodreturns embeds rates in meta/text like "₹14,651 per gram for 24 karat"
-    const m24 = html.match(/₹([\d,]+)\s*per gram for 24 karat/);
-    const m22 = html.match(/₹([\d,]+)\s*per gram for 22 karat/);
-    const mAg = html.match(/₹([\d,]+)\s*per gram[^f]*silver/i) ||
-                html.match(/silver[^₹]*₹([\d,]+)\s*per gram/i);
+  await Promise.allSettled([
+    // India — goodreturns Chennai
+    scrape('https://www.goodreturns.in/gold-rates/chennai.html').then(html => {
+      const m24 = html.match(/₹([\d,]+)\s*per gram for 24 karat/);
+      const m22 = html.match(/₹([\d,]+)\s*per gram for 22 karat/);
+      const mAg = html.match(/silver[^₹]*?₹([\d,]+)\s*per gram/i)
+               || html.match(/₹([\d,]+)\s*per gram[^f]*?silver/i);
+      if (m24) results.in24k    = parseFloat(m24[1].replace(/,/g, ''));
+      if (m22) results.in22k    = parseFloat(m22[1].replace(/,/g, ''));
+      if (mAg) results.inSilver = parseFloat(mAg[1].replace(/,/g, ''));
+    }),
 
-    if (m24) results.in24k    = parseFloat(m24[1].replace(/,/g,''));
-    if (m22) results.in22k    = parseFloat(m22[1].replace(/,/g,''));
-    if (mAg) results.inSilver = parseFloat(mAg[1].replace(/,/g,''));
-  } catch(e) { console.warn('India scrape failed', e); }
-
-  // ── Malaysia ────────────────────────────────────────────
-  try {
-    const url    = 'https://www.goodreturns.in/gold-rates/malaysia.html';
-    const proxy  = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const resp   = await fetch(proxy);
-    const json   = await resp.json();
-    const html   = json.contents;
-
-    const m24 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 24 karat/i) ||
-                html.match(/24 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
-    const m22 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 22 karat/i) ||
-                html.match(/22 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
-    const mAg = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram[^f]*silver/i) ||
-                html.match(/silver[^R]*RM\s*([\d,]+(?:\.\d+)?)\s*per gram/i);
-
-    if (m24) results.my24k    = parseFloat(m24[1].replace(/,/g,''));
-    if (m22) results.my22k    = parseFloat(m22[1].replace(/,/g,''));
-    if (mAg) results.mySilver = parseFloat(mAg[1].replace(/,/g,''));
-  } catch(e) { console.warn('Malaysia scrape failed', e); }
+    // Malaysia — goodreturns Malaysia
+    scrape('https://www.goodreturns.in/gold-rates/malaysia.html').then(html => {
+      const m24 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 24 karat/i)
+               || html.match(/24 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
+      const m22 = html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram for 22 karat/i)
+               || html.match(/22 karat[^R]*RM\s*([\d,]+(?:\.\d+)?)/i);
+      const mAg = html.match(/silver[^R]*?RM\s*([\d,]+(?:\.\d+)?)\s*per gram/i)
+               || html.match(/RM\s*([\d,]+(?:\.\d+)?)\s*per gram[^f]*?silver/i);
+      if (m24) results.my24k    = parseFloat(m24[1].replace(/,/g, ''));
+      if (m22) results.my22k    = parseFloat(m22[1].replace(/,/g, ''));
+      if (mAg) results.mySilver = parseFloat(mAg[1].replace(/,/g, ''));
+    }),
+  ]);
 
   return results;
 }
 
-// ── RENDER FX STRIP ───────────────────────────────────────
-// fx is null when Yahoo is unreachable — show explicit "unavailable" state
-function renderFX(fx) {
+// ── RENDER FX ──────────────────────────────────────────────────────────────
+function renderFX(fx, state = 'live') {
+  const tag = $('fx-wise-tag');
+
   if (!fx) {
-    setTxt('fx-myr-inr', '—');
-    setTxt('fx-usd-inr', '—');
-    setTxt('fx-usd-myr', '—');
-    // Dim the wise tag to signal unavailability
-    const wiseTag = document.querySelector('.fx-wise-tag');
-    if (wiseTag) { wiseTag.textContent = 'unavailable'; wiseTag.style.background = '#fee2e2'; wiseTag.style.color = '#dc2626'; }
+    setText('fx-myr-inr', '—');
+    setText('fx-usd-inr', '—');
+    setText('fx-usd-myr', '—');
+    if (tag) {
+      tag.textContent = 'unavailable';
+      tag.style.cssText = 'background:#fee2e2;color:#dc2626';
+    }
     return;
   }
-  const wiseTag = document.querySelector('.fx-wise-tag');
-  if (wiseTag) { wiseTag.textContent = '≈ Wise'; wiseTag.style.background = ''; wiseTag.style.color = ''; }
-  setTxt('fx-myr-inr', fx.myrinr.toFixed(4));
-  setTxt('fx-usd-inr', fx.usdinr.toFixed(2));
-  setTxt('fx-usd-myr', fx.usdmyr.toFixed(4));
+
+  setText('fx-myr-inr', fx.myrinr.toFixed(4));
+  setText('fx-usd-inr', fx.usdinr.toFixed(2));
+  setText('fx-usd-myr', fx.usdmyr.toFixed(4));
+
+  if (tag) {
+    if (state === 'cached') {
+      tag.textContent = 'cached';
+      tag.style.cssText = 'background:#fef9c3;color:#92400e';
+    } else {
+      tag.textContent = '≈ Wise';
+      tag.style.cssText = '';
+    }
+  }
 }
 
-// ── RENDER PRICES ─────────────────────────────────────────
-function renderPrices(g, fx) {
-  // India
-  if (g.in24k)    setTxt('in-24k', fmtInr(g.in24k));
-  if (g.in22k)    setTxt('in-22k', fmtInr(g.in22k));
-  if (g.inSilver) setTxt('in-sk',  fmtInr(g.inSilver * 1000));
-
-  // Malaysia
-  if (g.my24k)    setTxt('my-24k',  fmtMyr(g.my24k));
-  if (g.my22k)    setTxt('my-22k',  fmtMyr(g.my22k));
-  if (g.mySilver) setTxt('my-s100', fmtMyr(g.mySilver * 100));
+// ── RENDER GOLD PRICES ─────────────────────────────────────────────────────
+function renderGold(g) {
+  if (g.in24k)    setText('in-24k',  fmtInr(g.in24k));
+  if (g.in22k)    setText('in-22k',  fmtInr(g.in22k));
+  if (g.inSilver) setText('in-sk',   fmtInr(g.inSilver * 100));   // per 100g
+  if (g.my24k)    setText('my-24k',  fmtMyr(g.my24k));
+  if (g.my22k)    setText('my-22k',  fmtMyr(g.my22k));
+  if (g.mySilver) setText('my-s100', fmtMyr(g.mySilver * 100));
 }
 
-// ── MAIN LOAD ─────────────────────────────────────────────
-async function loadAll(manual = false) {
-  const btn  = document.getElementById('refresh-btn');
-  const spin = document.getElementById('spin-icon');
-  btn.disabled = true;
-  spin.classList.add('loading');
+// Show a clear error state — never show stale numbers without labelling them
+function renderGoldError() {
+  ['in-24k','in-22k','in-sk','my-24k','my-22k','my-s100'].forEach(id => {
+    const el = $(id);
+    if (el) {
+      el.textContent = '—';
+      el.style.color = '#9ca3af';
+    }
+  });
+}
 
-  // Run FX and gold scrape in parallel
-  const [fx, gold] = await Promise.all([
-    fetchFX().catch(e => { console.warn('FX failed', e); return null; }),
-    fetchGoldPrices().catch(e => { console.warn('Gold scrape failed', e); return null; })
-  ]);
+// ── CACHE HELPERS ──────────────────────────────────────────────────────────
+function cacheGet(key, ttl) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (Date.now() - obj.ts > ttl) return null;   // expired
+    return obj;
+  } catch (_) { return null; }
+}
 
-  if (fx) {
-    renderFX(fx);
-    // Cache only on successful fetch
-    try { localStorage.setItem('mw_fx_cache', JSON.stringify({ ...fx, ts: Date.now() })); } catch(e) {}
-  } else {
-    // Try a recent localStorage cache (under 12h old) before showing error
-    let recovered = false;
-    try {
-      const cached = JSON.parse(localStorage.getItem('mw_fx_cache') || 'null');
-      if (cached && (Date.now() - cached.ts) < 12 * 60 * 60 * 1000) {
-        renderFX(cached);
-        recovered = true;
-        // Show a subtle stale indicator on the wise tag
-        const wiseTag = document.querySelector('.fx-wise-tag');
-        if (wiseTag) { wiseTag.textContent = 'cached'; wiseTag.style.background = '#fef9c3'; wiseTag.style.color = '#92400e'; }
+function cacheSet(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ ...data, ts: Date.now() })); } catch (_) {}
+}
+
+// ── MAIN LOAD ──────────────────────────────────────────────────────────────
+// fetchFX is true on page open / manual Refresh only.
+// Scheduled auto-refresh calls loadAll() with no args → skips FX.
+async function loadAll(fetchFXNow = false) {
+  const btn  = $('refresh-btn');
+  const spin = $('spin-icon');
+  if (btn)  btn.disabled = true;
+  if (spin) spin.classList.add('loading');
+
+  try {
+    const goldPromise = fetchGoldPrices();
+    const fxPromise   = fetchFXNow ? fetchFX() : Promise.resolve('skip');
+
+    const [gold, fx] = await Promise.all([goldPromise, fxPromise]);
+
+    // ── FX ───────────────────────────────────────────────────────────────
+    if (fx === 'skip') {
+      // Scheduled refresh — leave FX display untouched
+    } else if (fx) {
+      renderFX(fx, 'live');
+      cacheSet('mw_fx', fx);
+    } else {
+      // Fetch failed — try recent cache, otherwise show unavailable
+      const cached = cacheGet('mw_fx', FX_CACHE_TTL);
+      if (cached) {
+        renderFX(cached, 'cached');
+      } else {
+        renderFX(null);
       }
-    } catch(e) {}
-    if (!recovered) renderFX(null); // show — dashes
-  }
+    }
 
-  if (gold && (gold.in24k || gold.my24k)) {
-    renderPrices(gold, fx);
-    // Cache gold
-    try { localStorage.setItem('mw_gold_cache', JSON.stringify({ ...gold, ts: Date.now() })); } catch(e) {}
-  } else {
-    // Try gold cache
-    try {
-      const c = JSON.parse(localStorage.getItem('mw_gold_cache') || 'null');
-      if (c) renderPrices(c, fx);
-      else loadHardFallback(fx);
-    } catch(e) { loadHardFallback(fx); }
+    // ── GOLD ─────────────────────────────────────────────────────────────
+    const hasGold = gold && (gold.in24k || gold.my24k);
+    if (hasGold) {
+      renderGold(gold);
+      cacheSet('mw_gold', gold);
+    } else {
+      const cached = cacheGet('mw_gold', GOLD_CACHE_TTL);
+      if (cached) {
+        renderGold(cached);
+      } else {
+        renderGoldError();
+      }
+    }
+  } finally {
+    // Always re-enable — even if something throws
+    if (btn)  btn.disabled = false;
+    if (spin) spin.classList.remove('loading');
   }
-
-  btn.disabled = false;
-  spin.classList.remove('loading');
 }
 
-// Hard fallback — verified Mar 28 2026 prices from jeweller + livechennai
-function loadHardFallback(fx) {
-  setTxt('in-24k', fmtInr(14651));
-  setTxt('in-22k', fmtInr(13430));
-  setTxt('in-sk',  fmtInr(250000));
-  setTxt('my-24k',  fmtMyr(594));
-  setTxt('my-22k',  fmtMyr(560));
-  setTxt('my-s100', fmtMyr(1131));
-}
+// ── SMART AUTO-REFRESH ─────────────────────────────────────────────────────
+// India:   IBJA AM at 11:05 IST and PM at 17:05 IST, Mon–Fri only
+// Malaysia: Public Gold midnight reset, daily at 00:05 MYT
+// Auto-refresh only fetches gold prices, not FX (saves edge function calls).
 
-// ── SMART AUTO-REFRESH — aligned to actual price update schedules ─────────────
-//
-// INDIA (Chennai / IBJA):
-//   - Updates TWICE daily: AM ~11:00 IST, PM ~17:00 IST
-//   - Only Mon–Fri (no weekends, no Central Govt holidays)
-//   - We fetch at 11:05 IST and 17:05 IST on weekdays
-//
-// MALAYSIA (retail jeweller / Public Gold):
-//   - Updates ONCE daily at midnight MYT (00:00 MYT)
-//   - 7 days a week
-//   - We fetch at 00:05 MYT daily
-//
-// Strategy: collect ALL next trigger times, fire at the soonest one.
-// FX (Yahoo) is always refreshed alongside gold prices.
+function msUntilNextGoldUpdate() {
+  const now   = Date.now();
+  const tzOff = new Date().getTimezoneOffset();
 
-function getNextRefreshMs() {
-  const now   = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const istDate = new Date(now + (tzOff + IST_OFF) * 60000);
+  const mytDate = new Date(now + (tzOff + MYT_OFF) * 60000);
 
-  // Current time in IST and MYT (as fractional hours)
-  const istDate  = new Date(utcMs + IST_OFF * 60000);
-  const mytDate  = new Date(utcMs + MYT_OFF * 60000);
-  const istHour  = istDate.getUTCHours() + istDate.getUTCMinutes() / 60;
-  const mytHour  = mytDate.getUTCHours() + mytDate.getUTCMinutes() / 60;
-  const istDow   = istDate.getUTCDay(); // 0=Sun, 1=Mon … 6=Sat
+  const istH  = istDate.getUTCHours() + istDate.getUTCMinutes() / 60;
+  const mytH  = mytDate.getUTCHours() + mytDate.getUTCMinutes() / 60;
+  const istDow = istDate.getUTCDay();
 
-  const candidates = [];
+  const slots = [];
 
-  // ── India: 11:05 and 17:05 IST, weekdays only ──────────────
+  // India slots — weekdays only
   const isWeekday = istDow >= 1 && istDow <= 5;
-  const indiaSlots = [11 + 5/60, 17 + 5/60];
-
-  for (const slot of indiaSlots) {
-    if (isWeekday && slot > istHour) {
-      // Today, later
-      candidates.push((slot - istHour) * 3600 * 1000);
+  for (const slot of [11 + 5/60, 17 + 5/60]) {
+    if (isWeekday && slot > istH) {
+      slots.push((slot - istH) * 3600000);
     }
   }
 
-  // If no India slots left today, find next weekday 11:05 IST
-  if (isWeekday && istHour >= indiaSlots[1]) {
-    // Past both slots today — next is tomorrow if weekday, else Monday
-    let daysAhead = 1;
-    const nextDow = (istDow + 1) % 7;
-    if (nextDow === 6) daysAhead = 2; // Saturday → Monday
-    if (nextDow === 0) daysAhead = 1; // Sunday → Monday (already handled above)
-    // Actually recalculate: skip weekend
+  if (slots.length === 0) {
+    // Find hours until next weekday 11:05 IST
     let d = 1;
-    while (true) {
-      const candidateDow = (istDow + d) % 7;
-      if (candidateDow >= 1 && candidateDow <= 5) break;
-      d++;
-    }
-    const hoursUntilMidnight = 24 - istHour;
-    const nextSlotHours = hoursUntilMidnight + (d - 1) * 24 + indiaSlots[0];
-    candidates.push(nextSlotHours * 3600 * 1000);
+    while (((istDow + d) % 7 === 0) || ((istDow + d) % 7 === 6)) d++;
+    slots.push(((24 - istH) + (d - 1) * 24 + 11 + 5/60) * 3600000);
   }
 
-  if (!isWeekday) {
-    // Weekend — skip to Monday 11:05 IST
-    const daysToMonday = istDow === 0 ? 1 : 2; // Sun→1, Sat→2
-    const hoursUntilMidnight = 24 - istHour;
-    candidates.push((hoursUntilMidnight + (daysToMonday - 1) * 24 + indiaSlots[0]) * 3600 * 1000);
-  }
+  // Malaysia slot — daily
+  const mySlot = 5 / 60; // 00:05 MYT
+  slots.push(((mySlot > mytH ? mySlot - mytH : 24 - mytH + mySlot)) * 3600000);
 
-  // ── Malaysia: 00:05 MYT daily ──────────────────────────────
-  const mySlotsHour = 0 + 5/60; // 00:05 MYT
-  if (mySlotsHour > mytHour) {
-    candidates.push((mySlotsHour - mytHour) * 3600 * 1000);
-  } else {
-    // Already past midnight today — next is tomorrow 00:05 MYT
-    candidates.push((24 - mytHour + mySlotsHour) * 3600 * 1000);
-  }
-
-  // Return the soonest trigger, minimum 60 seconds to avoid rapid-fire
-  return Math.max(60 * 1000, Math.min(...candidates));
+  return Math.max(60000, Math.min(...slots)); // minimum 1 minute
 }
 
 function scheduleNextRefresh() {
-  const msUntilNext = getNextRefreshMs();
-  const nextTime = new Date(Date.now() + msUntilNext);
-  console.log(`MetalWatch: next auto-refresh in ${(msUntilNext/60000).toFixed(1)} min (${nextTime.toLocaleTimeString()})`);
+  const ms = msUntilNextGoldUpdate();
+  console.debug(
+    `[MetalWatch] Next gold refresh in ${(ms / 60000).toFixed(1)} min`,
+    `(${new Date(Date.now() + ms).toLocaleTimeString()})`
+  );
   setTimeout(() => {
-    loadAll();
-    scheduleNextRefresh();
-  }, msUntilNext);
+    loadAll(false);        // gold only, no FX
+    scheduleNextRefresh(); // re-arm
+  }, ms);
 }
 
-// Re-fetch if tab was backgrounded for >30 min
-let lastLoad = Date.now();
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && Date.now() - lastLoad > 30 * 60 * 1000) {
-    loadAll();
-    lastLoad = Date.now();
-  }
-});
-
-// ── INIT ──────────────────────────────────────────────────
-tickFooters();
-loadAll();
-scheduleNextRefresh();
+// ── INIT ───────────────────────────────────────────────────────────────────
+updateDateLabels();
+loadAll(true);          // fetch both gold and FX on page open
+scheduleNextRefresh();  // arm gold-only auto-refresh
 </script>
 </body>
 </html>
